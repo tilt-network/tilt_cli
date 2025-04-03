@@ -11,15 +11,22 @@ fn main() {
                 .about("Creates a new Tilt project")
                 .arg(Arg::new("name").required(true)),
         )
+        .subcommand(ClapCommand::new("build").about("Build the Tilt project"))
         .get_matches();
 
-    if let Some(sub_matches) = matches.subcommand_matches("new") {
-        let project_name = sub_matches.get_one::<String>("name").unwrap();
-        create_project(project_name);
+    match matches.subcommand() {
+        Some(("new", sub_matches)) => {
+            let project_name = sub_matches.get_one::<String>("name").unwrap();
+            create_new_project(project_name);
+        }
+        Some(("build", _)) => {
+            build_project();
+        }
+        _ => unreachable!(), // Clap ensures a valid subcommand is provided
     }
 }
 
-fn create_project(project_name: &String) {
+fn create_new_project(project_name: &String) {
     let output = Command::new("cargo")
         .args(["new", "--lib", project_name])
         .output()
@@ -57,4 +64,16 @@ fn create_project(project_name: &String) {
     fs::write(&toml_path, custom_toml).expect("Failed to write Cargo.toml");
 
     println!("Project '{}' created successfully!", project_name);
+}
+
+fn build_project() {
+    let output = Command::new("cargo")
+        .args(["build", "--target", "wasm32-unknown-unknown", "--release"])
+        .output()
+        .expect("Failed to execute build");
+
+    if !output.status.success() {
+        eprintln!("Error building project: {:?}", output);
+        return;
+    }
 }

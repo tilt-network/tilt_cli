@@ -22,11 +22,14 @@ name = "app"
 version = "0.1.0"
 edition = "2024"
 
+[net]
+git-fetch-with-cli = true
+
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
-tilt_app = { version = "0.1.0", path = "../tilt_app" }
+tilt_app = { git = "ssh://git@github.com/tilt-network/tilt_core.git", branch = "main" }
 "#;
