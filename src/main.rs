@@ -112,7 +112,6 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
     use std::fs;
-    use std::path::Path;
     use tempfile::tempdir;
 
     #[test]
