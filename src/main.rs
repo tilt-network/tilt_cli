@@ -1,6 +1,8 @@
 use clap::{Arg, Command as ClapCommand};
 use custom_lib::{CUSTOM_LIB, CUSTOM_TOML};
-use std::{fs, process::Command};
+use reqwest::Client;
+use reqwest::multipart;
+use std::{fs, path::Path, process::Command};
 mod custom_lib;
 
 fn main() {
@@ -21,6 +23,10 @@ fn main() {
         }
         Some(("build", _)) => {
             build_project();
+        }
+        Some(("deploy", _)) => {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(deploy()).unwrap();
         }
         _ => unreachable!(), // Clap ensures a valid subcommand is provided
     }
@@ -76,4 +82,28 @@ fn build_project() {
         eprintln!("Error building project: {:?}", output);
         return;
     }
+}
+
+async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Client::new();
+    let package_name = env!("CARGO_PKG_NAME");
+    let url = "http://localhost:3000/upload_program"; // Replace the your actual endpoint
+    let filename = format!(
+        "./target/wasm32-unknown-unknown/release/{}.wasm",
+        package_name
+    );
+    let file_path = Path::new(&filename);
+    let file_bytes = std::fs::read(file_path)?;
+
+    let part = multipart::Part::bytes(file_bytes)
+        .file_name(filename)
+        .mime_str("application/wasm")?;
+
+    let form = multipart::Form::new().part("file", part);
+
+    let response = client.post(url).multipart(form).send().await?;
+
+    println!("Response: {:?}", response.text().await?);
+
+    Ok(())
 }
