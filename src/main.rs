@@ -107,3 +107,68 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_create_new_project() {
+        let temp_dir = tempdir().unwrap();
+        let project_name = temp_dir.path().join("test_project");
+        let project_name_str = project_name.to_str().unwrap().to_string();
+
+        create_new_project(&project_name_str);
+
+        assert!(
+            project_name.join("src/lib.rs").exists(),
+            "lib.rs should exist"
+        );
+        assert!(
+            project_name.join("Cargo.toml").exists(),
+            "Cargo.toml should exist"
+        );
+    }
+
+    #[test]
+    fn test_build_project() {
+        let output = Command::new("cargo")
+            .args(["--version"])
+            .output()
+            .expect("Failed to check cargo availability");
+
+        assert!(output.status.success(), "Cargo should be installed");
+
+        build_project();
+    }
+
+    #[tokio::test]
+    async fn test_deploy() {
+        let client = Client::new();
+        let temp_dir = tempdir().unwrap();
+        let wasm_file = temp_dir.path().join("test.wasm");
+
+        fs::write(&wasm_file, b"\x00asm\x01\x00\x00\x00").expect("Failed to write test wasm file");
+
+        let part = multipart::Part::bytes(fs::read(&wasm_file).unwrap())
+            .file_name("test.wasm")
+            .mime_str("application/wasm")
+            .unwrap();
+
+        let form = multipart::Form::new().part("file", part);
+
+        let response = client
+            .post("http://localhost:3000/upload_program")
+            .multipart(form)
+            .send()
+            .await;
+
+        assert!(
+            response.is_ok(),
+            "Deploy request should be sent successfully"
+        );
+    }
+}
