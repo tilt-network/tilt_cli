@@ -1,9 +1,15 @@
 use clap::{Arg, Command as ClapCommand};
 use custom_lib::{CUSTOM_LIB, CUSTOM_TOML};
+use dirs::home_dir;
 use reqwest::Client;
 use reqwest::multipart;
+use rusqlite::Connection;
+use rusqlite::params;
 use std::{fs, path::Path, process::Command};
+use uuid::Uuid;
 mod custom_lib;
+
+const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 
 fn main() {
     let matches = ClapCommand::new("tilt")
@@ -78,6 +84,21 @@ fn build_project() {
         .output()
         .expect("Failed to execute build");
 
+    let original_path = release_path(PACKAGE_NAME);
+    let id = Uuid::new_v4().to_string();
+    let renamed_path = release_path(&id);
+    if let Err(e) = std::fs::rename(&original_path, &renamed_path) {
+        eprintln!("Failed to rename .wasm file: {}", e);
+    } else {
+        println!("Renamed wasm file to: {}", id);
+    }
+    let conn = get_or_init_db();
+    conn.execute(
+        "INSERT OR REPLACE INTO projects (name, wasm_uuid) VALUES (?1, ?2)",
+        params![PACKAGE_NAME, id],
+    )
+    .expect("Failed to insert project into db");
+
     if !output.status.success() {
         eprintln!("Error building project: {:?}", output);
         return;
@@ -86,12 +107,8 @@ fn build_project() {
 
 async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
-    let package_name = env!("CARGO_PKG_NAME");
-    let url = "http://localhost:3000/upload_program"; // Replace the your actual endpoint
-    let filename = format!(
-        "./target/wasm32-unknown-unknown/release/{}.wasm",
-        package_name
-    );
+    let url = "http://localhost:3000/upload_program"; // Replace the actual endpoint
+    let filename = release_path(PACKAGE_NAME);
     let file_path = Path::new(&filename);
     let file_bytes = std::fs::read(file_path)?;
 
@@ -106,6 +123,34 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     println!("Response: {:?}", response.text().await?);
 
     Ok(())
+}
+
+fn get_or_init_db() -> Connection {
+    let mut db_path = home_dir().expect("Could not determine home directory");
+    db_path.push(".tilt");
+    fs::create_dir_all(&db_path).expect("Failed to create ~/.tilt");
+
+    db_path.push("tilt.db");
+    let db_exists = db_path.exists();
+
+    let conn = Connection::open(&db_path).expect("Failed to open DB");
+
+    if !db_exists {
+        conn.execute(
+            "CREATE TABLE projects (
+                name TEXT PRIMARY KEY,
+                wasm_uuid TEXT NOT NULL
+            )",
+            [],
+        )
+        .expect("Failed to create table");
+    }
+
+    conn
+}
+
+fn release_path(filename: &str) -> String {
+    format!("./target/wasm32-unknown-unknown/release/{}.wasm", filename)
 }
 
 #[cfg(test)]
@@ -134,14 +179,19 @@ mod tests {
 
     #[test]
     fn test_build_project() {
-        let output = Command::new("cargo")
-            .args(["--version"])
-            .output()
-            .expect("Failed to check cargo availability");
-
-        assert!(output.status.success(), "Cargo should be installed");
-
         build_project();
+
+        let wasm_dir = Path::new("./target/wasm32-unknown-unknown/release");
+
+        let wasm_file = fs::read_dir(wasm_dir)
+            .expect("Failed to read target directory")
+            .filter_map(Result::ok)
+            .find(|entry| entry.path().extension().map_or(false, |ext| ext == "wasm"));
+
+        assert!(
+            wasm_file.is_some(),
+            "Expected a .wasm file in the release dir"
+        );
     }
 
     #[tokio::test]
