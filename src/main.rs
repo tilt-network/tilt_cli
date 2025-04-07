@@ -2,6 +2,7 @@ use clap::{Arg, Command as ClapCommand};
 use custom_lib::{CUSTOM_LIB, CUSTOM_TOML};
 use dirs::home_dir;
 use reqwest::Client;
+use reqwest::StatusCode;
 use reqwest::multipart;
 use rusqlite::Connection;
 use rusqlite::params;
@@ -21,6 +22,8 @@ fn main() {
         )
         .subcommand(ClapCommand::new("build").about("Build the Tilt project"))
         .subcommand(ClapCommand::new("test").about("Test the Tilt project"))
+        .subcommand(ClapCommand::new("clean").about("Clean the Tilt project"))
+        .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"))
         .get_matches();
 
     match matches.subcommand() {
@@ -30,6 +33,9 @@ fn main() {
         }
         Some(("test", _)) => {
             test_project();
+        }
+        Some(("clean", _)) => {
+            clean_project();
         }
         Some(("build", _)) => {
             build_project();
@@ -97,6 +103,19 @@ fn test_project() {
     }
 }
 
+fn clean_project() {
+    let mut child = Command::new("cargo")
+        .arg("clean")
+        .spawn()
+        .expect("Failed to execute test");
+
+    let status = child.wait().expect("Failed to wait on test process");
+
+    if !status.success() {
+        eprintln!("Tests failed");
+    }
+}
+
 fn get_project_name() -> String {
     let output = Command::new("sh")
         .arg("-c")
@@ -111,31 +130,38 @@ fn get_project_name() -> String {
 }
 
 fn build_project() {
-    let output = Command::new("cargo")
+    let mut child = Command::new("cargo")
         .args(["build", "--target", "wasm32-unknown-unknown", "--release"])
-        .output()
+        .spawn()
         .expect("Failed to execute build");
 
-    // let original_path = release_path(PACKAGE_NAME);
-    let package_name = get_project_name();
-    let original_path = release_path(&package_name);
-    let id = Uuid::new_v4().to_string();
-    let renamed_path = release_path(&id);
-    if let Err(e) = std::fs::rename(&original_path, &renamed_path) {
-        eprintln!("Failed to rename .wasm file: {}", e);
-    } else {
-        println!("Renamed wasm file to: {}", id);
-    }
-    let conn = get_or_init_db();
-    conn.execute(
-        "INSERT OR REPLACE INTO projects (name, wasm_uuid) VALUES (?1, ?2)",
-        params![package_name, id],
-    )
-    .expect("Failed to insert project into db");
+    let status = child.wait().expect("Failed to wait on test process");
 
-    if !output.status.success() {
-        eprintln!("Error building project: {:?}", output);
-        return;
+    // let original_path = release_path(PACKAGE_NAME);
+    // let package_name = get_project_name();
+    // println!("package_name: {}", package_name);
+    // let original_path = release_path(&package_name);
+    // let id = Uuid::new_v4().to_string();
+    // let renamed_path = release_path(&id);
+    // if let Err(e) = std::fs::rename(&original_path, &renamed_path) {
+    //     eprintln!("Failed to rename .wasm file: {}", e);
+    // } else {
+    //     println!("Renamed wasm file to: {}", id);
+    // }
+    // let conn = get_or_init_db();
+    // conn.execute(
+    //     "INSERT OR REPLACE INTO projects (name, wasm_uuid) VALUES (?1, ?2)",
+    //     params![package_name, id],
+    // )
+    // .expect("Failed to insert project into db");
+
+    // if !output.status.success() {
+    //     eprintln!("Error building project: {:?}", output);
+    //     return;
+    // }
+
+    if !status.success() {
+        eprintln!("Tests failed");
     }
 }
 
@@ -156,7 +182,14 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
 
     let response = client.post(url).multipart(form).send().await?;
 
-    println!("Response: {:?}", response.text().await?);
+    if response.status() == StatusCode::OK {
+        println!("Program uploaded successfuly");
+        println!("Response: {:?}", response.text().await?);
+    } else {
+        println!("Failed to upload program");
+    }
+
+    // println!("Response: {:?}", response.text().await?);
 
     Ok(())
 }
@@ -197,6 +230,24 @@ mod tests {
 
     #[test]
     fn test_create_new_project() {
+        let temp_dir = tempdir().unwrap();
+        let project_name = temp_dir.path().join("test_project");
+        let project_name_str = project_name.to_str().unwrap().to_string();
+
+        create_new_project(&project_name_str);
+
+        assert!(
+            project_name.join("src/lib.rs").exists(),
+            "lib.rs should exist"
+        );
+        assert!(
+            project_name.join("Cargo.toml").exists(),
+            "Cargo.toml should exist"
+        );
+    }
+
+    #[test]
+    fn test_test_project() {
         let temp_dir = tempdir().unwrap();
         let project_name = temp_dir.path().join("test_project");
         let project_name_str = project_name.to_str().unwrap().to_string();
