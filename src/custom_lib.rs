@@ -15,15 +15,26 @@ pub struct Response {
 fn main(req: Request) -> Response {
     Response { arg: req.arg }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_main() {
+        let req = Request {
+            arg: "test".to_string(),
+        };
+        let res = main(req);
+        assert_eq!(res.arg, "test");
+    }
+}
 "#;
 
 pub const CUSTOM_TOML: &str = r#"[package]
-name = "app"
+name = "{project_name}"
 version = "0.1.0"
 edition = "2024"
-
-[net]
-git-fetch-with-cli = true
 
 [lib]
 crate-type = ["cdylib"]
@@ -31,5 +42,5 @@ crate-type = ["cdylib"]
 [dependencies]
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
-tilt_app = { git = "ssh://git@github.com/tilt-network/tilt_core.git", branch = "main" }
+tilt_app = { git = "https://github.com/tilt-network/tilt_core.git", branch = "main" }
 "#;

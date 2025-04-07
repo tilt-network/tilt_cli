@@ -20,12 +20,16 @@ fn main() {
                 .arg(Arg::new("name").required(true)),
         )
         .subcommand(ClapCommand::new("build").about("Build the Tilt project"))
+        .subcommand(ClapCommand::new("test").about("Test the Tilt project"))
         .get_matches();
 
     match matches.subcommand() {
         Some(("new", sub_matches)) => {
             let project_name = sub_matches.get_one::<String>("name").unwrap();
             create_new_project(project_name);
+        }
+        Some(("test", _)) => {
+            test_project();
         }
         Some(("build", _)) => {
             build_project();
@@ -60,7 +64,7 @@ fn create_new_project(project_name: &String) {
     let lib_path = format!("{}/src/lib.rs", project_name);
     let toml_path = format!("{}/Cargo.toml", project_name);
     let custom_lib = CUSTOM_LIB;
-    let custom_toml = CUSTOM_TOML;
+    let custom_toml = CUSTOM_TOML.replace("{project_name}", project_name);
 
     // Add WebAssembly target
     let status = Command::new("rustup")
@@ -76,6 +80,34 @@ fn create_new_project(project_name: &String) {
     fs::write(&toml_path, custom_toml).expect("Failed to write Cargo.toml");
 
     println!("Project '{}' created successfully!", project_name);
+    println!("    cd ./{}", project_name);
+    println!("    tilt test");
+}
+
+fn test_project() {
+    let mut child = Command::new("cargo")
+        .arg("test")
+        .spawn()
+        .expect("Failed to execute test");
+
+    let status = child.wait().expect("Failed to wait on test process");
+
+    if !status.success() {
+        eprintln!("Tests failed");
+    }
+}
+
+fn get_project_name() -> String {
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg("cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name'")
+        .output()
+        .expect("Failed to execute shell command");
+
+    String::from_utf8(output.stdout)
+        .expect("Invalid UTF-8 in output")
+        .trim()
+        .to_string()
 }
 
 fn build_project() {
@@ -84,7 +116,9 @@ fn build_project() {
         .output()
         .expect("Failed to execute build");
 
-    let original_path = release_path(PACKAGE_NAME);
+    // let original_path = release_path(PACKAGE_NAME);
+    let package_name = get_project_name();
+    let original_path = release_path(&package_name);
     let id = Uuid::new_v4().to_string();
     let renamed_path = release_path(&id);
     if let Err(e) = std::fs::rename(&original_path, &renamed_path) {
@@ -95,7 +129,7 @@ fn build_project() {
     let conn = get_or_init_db();
     conn.execute(
         "INSERT OR REPLACE INTO projects (name, wasm_uuid) VALUES (?1, ?2)",
-        params![PACKAGE_NAME, id],
+        params![package_name, id],
     )
     .expect("Failed to insert project into db");
 
@@ -108,7 +142,9 @@ fn build_project() {
 async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
     let url = "http://localhost:3000/upload_program"; // Replace the actual endpoint
-    let filename = release_path(PACKAGE_NAME);
+    let package_name = get_project_name();
+    // let filename = release_path(PACKAGE_NAME);
+    let filename = release_path(&package_name);
     let file_path = Path::new(&filename);
     let file_bytes = std::fs::read(file_path)?;
 
