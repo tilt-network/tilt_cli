@@ -8,7 +8,7 @@ use uuid::Uuid;
 mod custom_lib;
 
 fn main() {
-    let matches = ClapCommand::new("tilt")
+    let mut cmd = ClapCommand::new("tilt")
         .about("Command Line Application for Tilt network")
         .subcommand(
             ClapCommand::new("new")
@@ -18,8 +18,8 @@ fn main() {
         .subcommand(ClapCommand::new("build").about("Build the Tilt project"))
         .subcommand(ClapCommand::new("test").about("Test the Tilt project"))
         .subcommand(ClapCommand::new("clean").about("Clean the Tilt project"))
-        .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"))
-        .get_matches();
+        .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"));
+    let matches = cmd.clone().get_matches();
 
     match matches.subcommand() {
         Some(("new", sub_matches)) => {
@@ -39,7 +39,7 @@ fn main() {
             let rt = tokio::runtime::Runtime::new().unwrap();
             rt.block_on(deploy()).unwrap();
         }
-        _ => unreachable!(), // Clap ensures a valid subcommand is provided
+        _ => cmd.print_help().unwrap(),
     }
 }
 
@@ -130,10 +130,10 @@ fn build_project() {
         .spawn()
         .expect("Failed to execute build");
 
-    let status = child.wait().expect("Failed to wait on test process");
+    let status = child.wait().expect("Failed to build project");
 
     if !status.success() {
-        eprintln!("Tests failed");
+        eprintln!("Build failed");
     }
 }
 
