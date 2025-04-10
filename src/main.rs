@@ -140,8 +140,18 @@ fn build_project() {
     let toml_path = env::current_dir()
         .expect("failed to get current dir")
         .join("Cargo.toml");
-    let replaced_toml = maybe_replace_program_id(CUSTOM_TOML, &program_id);
+    let toml_content = fs::read_to_string(&toml_path).unwrap();
+    let replaced_toml = maybe_replace_program_id(&toml_content, &program_id);
     fs::write(toml_path, replaced_toml).unwrap();
+    let package_name = get_project_name();
+    let from_path = release_path(&package_name);
+    let to_path = release_path(&program_id);
+
+    if Path::new(&from_path).exists() {
+        fs::rename(from_path, to_path).expect("Failed to rename .wasm file");
+    } else {
+        eprintln!("Expected .wasm file not found, skipping rename");
+    }
 
     if !status.success() {
         eprintln!("Build failed");
