@@ -3,7 +3,9 @@ use custom_lib::{CUSTOM_LIB, CUSTOM_TOML};
 use reqwest::Client;
 use reqwest::StatusCode;
 use reqwest::multipart;
+use std::env;
 use std::{fs, path::Path, process::Command};
+use toml::Value;
 use uuid::Uuid;
 mod custom_lib;
 
@@ -131,6 +133,15 @@ fn build_project() {
         .expect("Failed to execute build");
 
     let status = child.wait().expect("Failed to build project");
+    let program_id = match check_program_id() {
+        Some(id) => id,
+        None => Uuid::new_v4().to_string(),
+    };
+    let toml_path = env::current_dir()
+        .expect("failed to get current dir")
+        .join("Cargo.toml");
+    let replaced_toml = maybe_replace_program_id(CUSTOM_TOML, &program_id);
+    fs::write(toml_path, replaced_toml).unwrap();
 
     if !status.success() {
         eprintln!("Build failed");
@@ -165,6 +176,34 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
 
 fn release_path(filename: &str) -> String {
     format!("./target/wasm32-unknown-unknown/release/{}.wasm", filename)
+}
+
+fn check_program_id() -> Option<String> {
+    let cwd = env::current_dir().ok()?;
+    let toml_path = cwd.join("Cargo.toml");
+    let toml_content = fs::read_to_string(&toml_path).ok()?;
+    let parsed: Value = toml_content.parse().ok()?;
+
+    let program_id = parsed
+        .get("package")?
+        .get("metadata")?
+        .get("mytool")?
+        .get("program_id")?
+        .as_str()?;
+
+    if program_id.trim() == "{program_id}" {
+        None
+    } else {
+        Some(program_id.to_string())
+    }
+}
+
+fn maybe_replace_program_id(custom_toml: &str, program_id: &str) -> String {
+    if custom_toml.contains("{program_id}") {
+        custom_toml.replace("{program_id}", program_id)
+    } else {
+        custom_toml.to_string()
+    }
 }
 
 #[cfg(test)]

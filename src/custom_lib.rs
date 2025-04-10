@@ -43,4 +43,7 @@ crate-type = ["cdylib"]
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 tilt_app = { git = "https://github.com/tilt-network/tilt_core.git", branch = "main" }
+
+[package.metadata.tilt]
+program_id = "{program_id}"
 "#;
