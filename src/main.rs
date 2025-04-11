@@ -161,13 +161,16 @@ fn build_project() {
 async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
     let url = "http://localhost:3000/upload_program"; // Replace the actual endpoint
-    let package_name = get_project_name();
-    let filename = release_path(&package_name);
+    let program_id = match check_program_id() {
+        Some(id) => id,
+        None => panic!("Build program before deploying"),
+    };
+    let filename = release_path(&program_id);
     let file_path = Path::new(&filename);
     let file_bytes = std::fs::read(file_path)?;
 
     let part = multipart::Part::bytes(file_bytes)
-        .file_name(filename)
+        .file_name(program_id)
         .mime_str("application/wasm")?;
 
     let form = multipart::Form::new().part("file", part);
@@ -197,7 +200,7 @@ fn check_program_id() -> Option<String> {
     let program_id = parsed
         .get("package")?
         .get("metadata")?
-        .get("mytool")?
+        .get("tilt")?
         .get("program_id")?
         .as_str()?;
 
