@@ -165,7 +165,8 @@ fn build_project() {
 }
 
 async fn list_programs() -> Result<(), Error> {
-    let url = String::from("https://staging.tilt.rest/programs");
+    let global_url = String::from(url_from_env());
+    let url = format!("{}/programs", global_url);
     let client = reqwest::Client::new();
 
     let response = client
@@ -200,7 +201,8 @@ async fn list_programs() -> Result<(), Error> {
 }
 async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
-    let url = "https://staging.tilt.rest/programs";
+    let global_url = url_from_env();
+    let url = format!("{}/programs", global_url);
     let program_id = match check_program_id() {
         Some(id) => id,
         None => panic!("Build program before deploying"),
@@ -290,6 +292,22 @@ pub fn get_package_metadata() -> Result<(String, String), Box<dyn std::error::Er
         .to_string();
 
     Ok((name, description))
+}
+
+fn url_from_env() -> &'static str {
+    let prod_url = "";
+    let stg_url = "https://staging.tilt.rest/";
+    match env::var("USE_TILT_STAGING") {
+        Ok(val) => {
+            let val = val.to_ascii_lowercase();
+            if val == "true" || val == "1" {
+                return stg_url;
+            }
+        }
+        Err(env::VarError::NotPresent) => return prod_url,
+        Err(_) => return prod_url, // Covers VarError::NotUnicode
+    }
+    stg_url
 }
 
 #[cfg(test)]
