@@ -1,6 +1,7 @@
 use clap::{Arg, Command as ClapCommand};
 use custom_lib::{CUSTOM_LIB, CUSTOM_TOML};
 use reqwest::Client;
+use reqwest::Error;
 use reqwest::StatusCode;
 use reqwest::multipart;
 use std::env;
@@ -20,6 +21,7 @@ fn main() {
         .subcommand(ClapCommand::new("build").about("Build the Tilt project"))
         .subcommand(ClapCommand::new("test").about("Test the Tilt project"))
         .subcommand(ClapCommand::new("clean").about("Clean the Tilt project"))
+        .subcommand(ClapCommand::new("list").about("List Tilt programs"))
         .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"));
     let matches = cmd.clone().get_matches();
 
@@ -36,6 +38,10 @@ fn main() {
         }
         Some(("build", _)) => {
             build_project();
+        }
+        Some(("list", _)) => {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(list_programs()).unwrap();
         }
         Some(("deploy", _)) => {
             let rt = tokio::runtime::Runtime::new().unwrap();
@@ -158,13 +164,48 @@ fn build_project() {
     }
 }
 
+async fn list_programs() -> Result<(), Error> {
+    let url = String::from("https://staging.tilt.rest/programs");
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(&url)
+        .query(&[("page", 1), ("page_size", 100)])
+        .send()
+        .await?
+        .json::<Value>()
+        .await?;
+
+    if let Some(data) = response.get("data").and_then(|v| v.as_array()) {
+        if data.is_empty() {
+            println!("No programs found.");
+        } else {
+            for item in data {
+                let name = item
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unnamed");
+                let description = item
+                    .get("description")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("-");
+                println!("{} — {}", name, description);
+            }
+        }
+    } else {
+        println!("Unexpected response format.");
+    }
+
+    Ok(())
+}
 async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
-    let url = "http://localhost:3000/upload_program"; // Replace the actual endpoint
+    let url = "https://staging.tilt.rest/programs";
     let program_id = match check_program_id() {
         Some(id) => id,
         None => panic!("Build program before deploying"),
     };
+    // add option to build before dploying (flag)
     let filename = release_path(&program_id);
     let file_path = Path::new(&filename);
     let file_bytes = std::fs::read(file_path)?;
@@ -172,8 +213,13 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     let part = multipart::Part::bytes(file_bytes)
         .file_name(program_id)
         .mime_str("application/wasm")?;
+    let (name, description) = get_package_metadata().unwrap();
 
-    let form = multipart::Form::new().part("file", part);
+    let form = multipart::Form::new()
+        .text("name", name)
+        .text("description", description)
+        .text("organization_id", String::from("organization_id")) // TODO figure out where to store this id
+        .part("program", part);
 
     let response = client.post(url).multipart(form).send().await?;
 
@@ -217,6 +263,33 @@ fn maybe_replace_program_id(custom_toml: &str, program_id: &str) -> String {
     } else {
         custom_toml.to_string()
     }
+}
+
+pub fn get_package_metadata() -> Result<(String, String), Box<dyn std::error::Error>> {
+    let cargo_toml_path = env::current_dir()
+        .expect("error getting current directory")
+        .join("Cargo.toml");
+    let cargo_toml_content = fs::read_to_string(cargo_toml_path)?;
+    let parsed: Value = cargo_toml_content.parse::<Value>()?;
+
+    let package = parsed
+        .get("package")
+        .and_then(|v| v.as_table())
+        .ok_or("Missing [package] section")?;
+
+    let name = package
+        .get("name")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing 'name' in [package]")?
+        .to_string();
+
+    let description = package
+        .get("description")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    Ok((name, description))
 }
 
 #[cfg(test)]
@@ -294,7 +367,7 @@ mod tests {
         let form = multipart::Form::new().part("file", part);
 
         let response = client
-            .post("http://localhost:3000/upload_program")
+            .post("https://staging.tilt.rest/programs")
             .multipart(form)
             .send()
             .await;

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 clap = "4.5.35"
 dirs = "6.0.0"
-reqwest = { version = "0.11.27", features = ["multipart"] }
+reqwest = { version = "0.11.27", features = ["multipart", "json"] }
 rusqlite = "0.34.0"
 tempfile = "3.19.1"
 tokio = { version = "1.44.1", features = ["full"] }
