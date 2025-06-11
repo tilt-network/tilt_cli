@@ -1,3 +1,9 @@
+mod auth;
+mod helpers;
+mod job;
+mod organization;
+mod task;
+
 use clap::{Arg, Command as ClapCommand};
 use custom_lib::{CUSTOM_LIB, CUSTOM_TOML};
 use reqwest::Client;
@@ -9,6 +15,18 @@ use std::{fs, path::Path, process::Command};
 use toml::Value;
 use uuid::Uuid;
 mod custom_lib;
+use auth::sign_in;
+use helpers::check_program_id;
+use helpers::get_package_metadata;
+use helpers::get_project_name;
+use helpers::maybe_replace_program_id;
+use helpers::release_path;
+use helpers::url_from_env;
+use organization::load_organization_id;
+
+use crate::auth::load_auth_token;
+use crate::job::create_job;
+
 
 fn main() {
     let mut cmd = ClapCommand::new("tilt")
@@ -22,7 +40,15 @@ fn main() {
         .subcommand(ClapCommand::new("test").about("Test the Tilt project"))
         .subcommand(ClapCommand::new("clean").about("Clean the Tilt project"))
         .subcommand(ClapCommand::new("list").about("List Tilt programs"))
-        .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"));
+        .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"))
+        .subcommand(ClapCommand::new("create-job").about("Create a job for the current project"))
+        .subcommand(
+            ClapCommand::new("signin")
+                .about("Sign in to Tilt")
+                .arg(Arg::new("email").long("email").short('e').required(true))
+                .arg(Arg::new("password").long("password").short('p').required(true)),
+        );
+
     let matches = cmd.clone().get_matches();
 
     match matches.subcommand() {
@@ -46,6 +72,16 @@ fn main() {
         Some(("deploy", _)) => {
             let rt = tokio::runtime::Runtime::new().unwrap();
             rt.block_on(deploy()).unwrap();
+        }
+        Some(("signin", sub_matches)) => {
+            let email = sub_matches.get_one::<String>("email").unwrap();
+            let password = sub_matches.get_one::<String>("password").unwrap();
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(sign_in(email, password)).unwrap();
+        }
+        Some(("create-job", _)) => {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(create_job()).unwrap();
         }
         _ => cmd.print_help().unwrap(),
     }
@@ -119,19 +155,6 @@ fn clean_project() {
     }
 }
 
-fn get_project_name() -> String {
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg("cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name'")
-        .output()
-        .expect("Failed to execute shell command");
-
-    String::from_utf8(output.stdout)
-        .expect("Invalid UTF-8 in output")
-        .trim()
-        .to_string()
-}
-
 fn build_project() {
     let mut child = Command::new("cargo")
         .args(["build", "--target", "wasm32-unknown-unknown", "--release"])
@@ -168,10 +191,12 @@ async fn list_programs() -> Result<(), Error> {
     let global_url = String::from(url_from_env());
     let url = format!("{}/programs", global_url);
     let client = reqwest::Client::new();
+    let token = load_auth_token().unwrap();
 
     let response = client
         .get(&url)
         .query(&[("page", 1), ("page_size", 100)])
+        .bearer_auth(&token)
         .send()
         .await?
         .json::<Value>()
@@ -199,6 +224,7 @@ async fn list_programs() -> Result<(), Error> {
 
     Ok(())
 }
+
 async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
     let global_url = url_from_env();
@@ -207,7 +233,7 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
         Some(id) => id,
         None => panic!("Build program before deploying"),
     };
-    // add option to build before dploying (flag)
+
     let filename = release_path(&program_id);
     let file_path = Path::new(&filename);
     let file_bytes = std::fs::read(file_path)?;
@@ -216,14 +242,16 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
         .file_name(program_id)
         .mime_str("application/wasm")?;
     let (name, description) = get_package_metadata().unwrap();
+    let organization_id = load_organization_id(0).unwrap();
+    let token = load_auth_token().unwrap();
 
     let form = multipart::Form::new()
         .text("name", name)
         .text("description", description)
-        .text("organization_id", String::from("organization_id")) // TODO figure out where to store this id
+        .text("organization_id", organization_id)
         .part("program", part);
 
-    let response = client.post(url).multipart(form).send().await?;
+    let response = client.post(url).bearer_auth(&token).multipart(form).send().await?;
 
     if response.status() == StatusCode::OK {
         println!("Program uploaded successfuly");
@@ -233,81 +261,6 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
-
-fn release_path(filename: &str) -> String {
-    format!("./target/wasm32-unknown-unknown/release/{}.wasm", filename)
-}
-
-fn check_program_id() -> Option<String> {
-    let cwd = env::current_dir().ok()?;
-    let toml_path = cwd.join("Cargo.toml");
-    let toml_content = fs::read_to_string(&toml_path).ok()?;
-    let parsed: Value = toml_content.parse().ok()?;
-
-    let program_id = parsed
-        .get("package")?
-        .get("metadata")?
-        .get("tilt")?
-        .get("program_id")?
-        .as_str()?;
-
-    if program_id.trim() == "{program_id}" {
-        None
-    } else {
-        Some(program_id.to_string())
-    }
-}
-
-fn maybe_replace_program_id(custom_toml: &str, program_id: &str) -> String {
-    if custom_toml.contains("{program_id}") {
-        custom_toml.replace("{program_id}", program_id)
-    } else {
-        custom_toml.to_string()
-    }
-}
-
-pub fn get_package_metadata() -> Result<(String, String), Box<dyn std::error::Error>> {
-    let cargo_toml_path = env::current_dir()
-        .expect("error getting current directory")
-        .join("Cargo.toml");
-    let cargo_toml_content = fs::read_to_string(cargo_toml_path)?;
-    let parsed: Value = cargo_toml_content.parse::<Value>()?;
-
-    let package = parsed
-        .get("package")
-        .and_then(|v| v.as_table())
-        .ok_or("Missing [package] section")?;
-
-    let name = package
-        .get("name")
-        .and_then(|v| v.as_str())
-        .ok_or("Missing 'name' in [package]")?
-        .to_string();
-
-    let description = package
-        .get("description")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string();
-
-    Ok((name, description))
-}
-
-fn url_from_env() -> &'static str {
-    let prod_url = "";
-    let stg_url = "https://staging.tilt.rest/";
-    match env::var("USE_TILT_STAGING") {
-        Ok(val) => {
-            let val = val.to_ascii_lowercase();
-            if val == "true" || val == "1" {
-                return stg_url;
-            }
-        }
-        Err(env::VarError::NotPresent) => return prod_url,
-        Err(_) => return prod_url, // Covers VarError::NotUnicode
-    }
-    stg_url
 }
 
 #[cfg(test)]
