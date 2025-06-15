@@ -1,5 +1,5 @@
 [package]
-name = "tilt"
+name = "tilt-cli"
 version = "0.1.0"
 edition = "2024"
 description = "CLI for interacting with the Tilt distributed processing platform"
