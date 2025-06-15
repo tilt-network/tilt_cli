@@ -1,4 +1,5 @@
 mod auth;
+mod entities;
 mod helpers;
 mod job;
 mod organization;
@@ -25,8 +26,9 @@ use helpers::url_from_env;
 use organization::load_organization_id;
 
 use crate::auth::load_auth_token;
+use crate::entities::program::Program;
+use crate::entities::response::Response;
 use crate::job::create_job;
-
 
 fn main() {
     let mut cmd = ClapCommand::new("tilt")
@@ -42,11 +44,17 @@ fn main() {
         .subcommand(ClapCommand::new("list").about("List Tilt programs"))
         .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"))
         .subcommand(ClapCommand::new("create-job").about("Create a job for the current project"))
+        .subcommand(ClapCommand::new("organization").about("Select a Tilt organization"))
         .subcommand(
             ClapCommand::new("signin")
                 .about("Sign in to Tilt")
                 .arg(Arg::new("email").long("email").short('e').required(true))
-                .arg(Arg::new("password").long("password").short('p').required(true)),
+                .arg(
+                    Arg::new("password")
+                        .long("password")
+                        .short('p')
+                        .required(true),
+                ),
         );
 
     let matches = cmd.clone().get_matches();
@@ -187,47 +195,92 @@ fn build_project() {
     }
 }
 
+fn print_program_table(data: Vec<Program>) {
+    // largura máxima da coluna Name
+    let name_width = 20;
+    // cabeçalho
+    println!(
+        "{:<name_width$} | {}",
+        "Name",
+        "Description",
+        name_width = name_width
+    );
+    println!(
+        "{:-<name_width$}-+-{:-<desc_width$}",
+        "",
+        "",
+        name_width = name_width,
+        desc_width = 50
+    );
+    // linhas
+    for item in data {
+        // pega ou default
+        let mut name = item.name.clone().unwrap_or_else(|| "Unnamed".into());
+        // trunca se ultrapassar
+        if name.chars().count() > name_width {
+            name = name.chars().take(name_width - 3).collect::<String>() + "...";
+        }
+        let desc = item.description.clone().unwrap_or_else(|| "-".into());
+        // imprime: Name (padded à esquerda) | Description
+        println!("{:<name_width$} | {}", name, desc, name_width = name_width);
+    }
+}
+
 async fn list_programs() -> Result<(), Error> {
-    let global_url = String::from(url_from_env());
+    // let global_url = String::from(url_from_env());
+    let global_url = "https://production.tilt.rest".to_string();
     let url = format!("{}/programs", global_url);
     let client = reqwest::Client::new();
     let token = load_auth_token().unwrap();
+    let organization_id = load_organization_id(0).unwrap();
 
     let response = client
         .get(&url)
-        .query(&[("page", 1), ("page_size", 100)])
+        .query(&[
+            ("page", "1"),
+            ("page_size", "100"),
+            ("organization_id", &organization_id),
+        ])
         .bearer_auth(&token)
         .send()
-        .await?
-        .json::<Value>()
         .await?;
 
-    if let Some(data) = response.get("data").and_then(|v| v.as_array()) {
-        if data.is_empty() {
-            println!("No programs found.");
-        } else {
-            for item in data {
-                let name = item
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Unnamed");
-                let description = item
-                    .get("description")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("-");
-                println!("{} — {}", name, description);
-            }
-        }
-    } else {
-        println!("Unexpected response format.");
-    }
+    let response = response.json::<Response<Vec<Program>>>().await?;
+
+    let Some(data) = response.data else {
+        println!("No programs found.");
+        return Ok(());
+    };
+
+    print_program_table(data);
+
+    // if let Some(data) = response.get("data").and_then(|v| v.as_array()) {
+    //     if data.is_empty() {
+    //         println!("No programs found.");
+    //     } else {
+    //         for item in data {
+    //             let name = item
+    //                 .get("name")
+    //                 .and_then(|v| v.as_str())
+    //                 .unwrap_or("Unnamed");
+    //             let description = item
+    //                 .get("description")
+    //                 .and_then(|v| v.as_str())
+    //                 .unwrap_or("-");
+    //             println!("{} — {}", name, description);
+    //         }
+    //     }
+    // } else {
+    //     println!("Unexpected response format.");
+    // }
 
     Ok(())
 }
 
 async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
-    let global_url = url_from_env();
+    // let global_url = url_from_env();
+    let global_url = "https://production.tilt.rest";
     let url = format!("{}/programs", global_url);
     let program_id = match check_program_id() {
         Some(id) => id,
@@ -251,11 +304,16 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
         .text("organization_id", organization_id)
         .part("program", part);
 
-    let response = client.post(url).bearer_auth(&token).multipart(form).send().await?;
+    let response = client
+        .post(url)
+        .bearer_auth(&token)
+        .multipart(form)
+        .send()
+        .await?;
 
     if response.status() == StatusCode::OK {
-        println!("Program uploaded successfuly");
-        println!("Response: {:?}", response.text().await?);
+        println!("Program deployed successfuly");
+        // println!("Response: {:?}", response.text().await?);
     } else {
         println!("Failed to upload program");
     }
@@ -338,7 +396,7 @@ mod tests {
         let form = multipart::Form::new().part("file", part);
 
         let response = client
-            .post("https://staging.tilt.rest/programs")
+            .post("https://production.tilt.rest/programs")
             .multipart(form)
             .send()
             .await;

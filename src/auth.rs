@@ -12,9 +12,8 @@ struct SignInResponse {
 }
 
 fn save_auth_token(token: &str) -> io::Result<()> {
-    let home_dir = dirs::home_dir().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::NotFound, "Failed to get home directory")
-    })?;
+    let home_dir = dirs::home_dir()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Failed to get home directory"))?;
 
     let tilt_dir = home_dir.join(".tilt");
     let token_path = tilt_dir.join("auth_token");
@@ -25,13 +24,10 @@ fn save_auth_token(token: &str) -> io::Result<()> {
     Ok(())
 }
 
-pub async fn sign_in(
-    email: &str,
-    password: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn sign_in(email: &str, password: &str) -> Result<String, Box<dyn std::error::Error>> {
     let client = Client::new();
     let response = client
-        .post("https://your.api.endpoint/auth/sign-in")
+        .post("https://production.tilt.rest/sign_in")
         .json(&serde_json::json!({ "email": email, "password": password }))
         .send()
         .await?;
@@ -41,7 +37,14 @@ pub async fn sign_in(
     }
 
     let data: SignInResponse = response.json().await?;
-    fetch_and_save_organization_ids(data.token.clone()).await?;
+    let organization_id = fetch_and_save_organization_ids(data.token.clone()).await?;
+    let response = client
+        .post("https://production.tilt.rest/organizations/select")
+        .json(&serde_json::json!({ "organization_id": organization_id }))
+        .bearer_auth(&data.token)
+        .send()
+        .await?;
+    let data: SignInResponse = response.json().await?;
     save_auth_token(&data.token).unwrap();
     Ok(data.token)
 }
@@ -53,4 +56,3 @@ pub fn load_auth_token() -> io::Result<String> {
 
     read_to_string(path).map(|s| s.trim().to_string())
 }
-

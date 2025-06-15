@@ -2,7 +2,6 @@ use std::{env, fs, process::Command};
 
 use toml::Value;
 
-
 pub fn get_project_name() -> String {
     let output = Command::new("sh")
         .arg("-c")
@@ -17,8 +16,8 @@ pub fn get_project_name() -> String {
 }
 
 pub fn url_from_env() -> &'static str {
-    let prod_url = "";
-    let stg_url = "https://staging.tilt.rest/";
+    let prod_url = "https://production.tilt.rest/";
+    let stg_url = "https://production.tilt.rest/";
     match env::var("USE_TILT_STAGING") {
         Ok(val) => {
             let val = val.to_ascii_lowercase();
@@ -29,7 +28,7 @@ pub fn url_from_env() -> &'static str {
         Err(env::VarError::NotPresent) => return prod_url,
         Err(_) => return prod_url, // Covers VarError::NotUnicode
     }
-    stg_url
+    prod_url
 }
 
 pub fn release_path(filename: &str) -> String {
