@@ -1,6 +1,6 @@
 Tilt CLI
 
-A command-line tool for working with the Tilt network, enabling developers to create, build, test, and deploy WebAssembly applications to the Tilt platform.
+A command-line tool for working with the Tilt network, enabling developers to create, build, test, and deploy WebAssembly programs to the Tilt platform.
 
 ## Installation
 
@@ -10,12 +10,10 @@ A command-line tool for working with the Tilt network, enabling developers to cr
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
 - WebAssembly target: `rustup target add wasm32-unknown-unknown`
 
-### Installing from source
+### Installation
 
 ```bash
-git clone https://github.com/tilt-network/tilt_cli.git
-cd tilt_cli
-cargo install --path .
+cargo install tilt-cli
 ```
 
 ## Usage
@@ -38,10 +36,10 @@ SUBCOMMANDS:
     help         Print this message or the help of the given subcommand(s)
 ```
 
-### Creating a New Project
+### Creating a New Program
 
 ```bash
-tilt new my-tilt-project
+tilt new my-tilt-program
 ```
 
 This creates a new Rust project configured for WebAssembly compilation and the Tilt platform.
@@ -77,16 +75,6 @@ Authenticates with the Tilt platform and stores your credentials locally.
 tilt deploy
 ```
 
-Uploads your compiled WebAssembly program to the Tilt platform.
-
-### Creating a Job
-
-```bash
-tilt create-job
-```
-
-Creates a new job for your project on the Tilt platform.
-
 ### Listing Your Programs
 
 ```bash
@@ -94,17 +82,6 @@ tilt list
 ```
 
 Shows a list of your programs deployed to the Tilt platform.
-
-## Project Structure
-
-When you create a new project with `tilt new`, it generates the following structure:
-
-```
-my-tilt-project/
-├── Cargo.toml       # Project configuration with Tilt metadata
-└── src/
-    └── lib.rs       # Main code for your Tilt program
-```
 
 ## Program Template
 
@@ -136,5 +113,5 @@ The `Cargo.toml` file includes Tilt-specific metadata:
 
 ```toml
 [package.metadata.tilt]
-program_id = "..."  # Unique identifier for your program
+program_id = "..."  # Unique identifier for your program, do not change this value
 ```
