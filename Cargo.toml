@@ -2,6 +2,8 @@
 name = "tilt"
 version = "0.1.0"
 edition = "2024"
+description = "CLI for interacting with the Tilt distributed processing platform"
+license-file = "LICENSE"
 
 [dependencies]
 clap = "4.5.35"
