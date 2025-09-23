@@ -4,7 +4,8 @@ use std::io::{self, ErrorKind};
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::organization::fetch_and_save_organization_ids;
+use crate::helpers::url_from_env;
+use crate::organization::{fetch_and_save_organization_ids, save_selected_organization_id};
 
 #[derive(Deserialize)]
 struct SignInResponse {
@@ -24,11 +25,12 @@ fn save_auth_token(token: &str) -> io::Result<()> {
     Ok(())
 }
 
-pub async fn sign_in(email: &str, password: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn sign_in(secret_key: &str) -> Result<String, Box<dyn std::error::Error>> {
     let client = Client::new();
+    let base_url = url_from_env();
     let response = client
-        .post("https://production.tilt.rest/sign_in")
-        .json(&serde_json::json!({ "email": email, "password": password }))
+        .post(format!("{base_url}/sign_in/api_key"))
+        .json(&serde_json::json!({ "secret_key": secret_key }))
         .send()
         .await?;
 
@@ -37,10 +39,29 @@ pub async fn sign_in(email: &str, password: &str) -> Result<String, Box<dyn std:
     }
 
     let data: SignInResponse = response.json().await?;
-    let organization_id = fetch_and_save_organization_ids(data.token.clone()).await?;
+    let orgs_id = fetch_and_save_organization_ids(data.token.clone()).await?;
+    println!("Select an organization:");
+    for (i, org) in orgs_id.iter().enumerate() {
+        println!("{}: {} ({})", i + 1, org.name, org.id);
+    }
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let choice: usize = input.trim().parse().unwrap_or(0);
+    if choice == 0 || choice > orgs_id.len() {
+        return Err("Invalid choice".into());
+    }
+    let organization = &orgs_id[choice - 1];
+    println!(
+        "Selected organization: {} ({})",
+        organization.name, organization.id
+    );
+
+    save_selected_organization_id(organization.id.clone())?;
+
     let response = client
-        .post("https://production.tilt.rest/organizations/select")
-        .json(&serde_json::json!({ "organization_id": organization_id }))
+        .post(format!("{base_url}/organizations/select",))
+        .json(&serde_json::json!({ "organization_id": organization.id }))
         .bearer_auth(&data.token)
         .send()
         .await?;
