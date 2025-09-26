@@ -36,7 +36,7 @@ pub fn release_path() -> Result<String, Box<dyn std::error::Error>> {
     let package_name = md.0;
     Ok(format!(
         "./target/wasm32-wasip2/release/{}.wasm",
-        package_name
+        package_name.replace("-", "_")
     ))
 }
 
