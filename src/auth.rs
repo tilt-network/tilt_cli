@@ -25,7 +25,16 @@ fn save_auth_token(token: &str) -> io::Result<()> {
     Ok(())
 }
 
+fn create_tilt_directory() -> io::Result<()> {
+    let home_dir = dirs::home_dir()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Failed to get home directory"))?;
+    let tilt_dir = home_dir.join(".tilt");
+    create_dir_all(tilt_dir)?;
+    Ok(())
+}
+
 pub async fn sign_in(secret_key: &str) -> Result<String, Box<dyn std::error::Error>> {
+    create_tilt_directory()?;
     let client = Client::new();
     let base_url = url_from_env();
     let response = client
@@ -42,7 +51,7 @@ pub async fn sign_in(secret_key: &str) -> Result<String, Box<dyn std::error::Err
     let orgs_id = fetch_and_save_organization_ids(data.token.clone()).await?;
     println!("Select an organization:");
     for (i, org) in orgs_id.iter().enumerate() {
-        println!("{}: {} ({})", i + 1, org.name, org.id);
+        println!("{}: {} ({})", i + 1, org.name, org.id)m
     }
 
     let mut input = String::new();

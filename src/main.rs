@@ -61,7 +61,13 @@ fn main() {
 
     match matches.subcommand() {
         Some(("new", sub_matches)) => {
-            let project_name = sub_matches.get_one::<String>("name").unwrap();
+            let project_name = match sub_matches.get_one::<String>("name") {
+                Some(pn) => pn,
+                None => {
+                    eprintln!("Project name is required");
+                    return;
+                }
+            };
             create_new_project(project_name);
         }
         Some(("test", _)) => {
@@ -75,7 +81,9 @@ fn main() {
         }
         Some(("list", _)) => {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(list_programs()).unwrap();
+            if let Err(err) = rt.block_on(list_programs()) {
+                println!("Error during listing: {}", err)
+            }
         }
         Some(("deploy", _)) => {
             let rt = tokio::runtime::Runtime::new().unwrap();
@@ -88,7 +96,9 @@ fn main() {
         Some(("signin", sub_matches)) => {
             let secret_key = sub_matches.get_one::<String>("secret_key").unwrap();
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(sign_in(secret_key)).unwrap();
+            if let Err(err) = rt.block_on(sign_in(secret_key)) {
+                println!("Error during sign in: {}", err);
+            }
         }
         Some(("create-job", _)) => {
             let rt = tokio::runtime::Runtime::new().unwrap();

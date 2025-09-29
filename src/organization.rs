@@ -1,4 +1,4 @@
-use std::fs::{read_to_string, write};
+use std::fs;
 use std::io::{self, ErrorKind};
 
 use reqwest::Client;
@@ -23,7 +23,7 @@ fn save_all_organization_ids(ids: &[String]) -> io::Result<()> {
         .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "Home directory not found"))?;
 
     let contents = ids.join("\n");
-    write(path, contents)
+    fs::write(path, contents)
 }
 
 pub fn save_selected_organization_id(id: String) -> io::Result<()> {
@@ -31,7 +31,7 @@ pub fn save_selected_organization_id(id: String) -> io::Result<()> {
         .map(|p| p.join(".tilt/organization_id_selected"))
         .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "Home directory not found"))?;
 
-    write(path, id)
+    fs::write(path, id)
 }
 
 pub async fn fetch_and_save_organization_ids(
@@ -67,7 +67,7 @@ pub fn load_organization_id(index: usize) -> io::Result<String> {
         .map(|p| p.join(".tilt/organization_id"))
         .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "Home directory not found"))?;
 
-    let contents = read_to_string(path)?;
+    let contents = fs::read_to_string(path)?;
     contents
         .lines()
         .nth(index)
@@ -80,5 +80,5 @@ pub fn load_selected_organization_id() -> io::Result<String> {
         .map(|p| p.join(".tilt/organization_id_selected"))
         .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "Home directory not found"))?;
 
-    read_to_string(path).map(|s| s.trim().to_string())
+    fs::read_to_string(path).map(|s| s.trim().to_string())
 }
