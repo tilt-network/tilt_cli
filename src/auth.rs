@@ -51,7 +51,7 @@ pub async fn sign_in(secret_key: &str) -> Result<String, Box<dyn std::error::Err
     let orgs_id = fetch_and_save_organization_ids(data.token.clone()).await?;
     println!("Select an organization:");
     for (i, org) in orgs_id.iter().enumerate() {
-        println!("{}: {} ({})", i + 1, org.name, org.id)m
+        println!("{}: {} ({})", i + 1, org.name, org.id)
     }
 
     let mut input = String::new();
