@@ -6,7 +6,10 @@ use std::path::PathBuf;
 
 use crate::helpers::url_from_env;
 
-pub async fn create_task(job_id: &str, segment_index: u32) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn create_task(
+    job_id: &str,
+    segment_index: u32,
+) -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
     let url = format!("{}/tasks", url_from_env());
 
@@ -29,7 +32,11 @@ pub async fn create_task(job_id: &str, segment_index: u32) -> Result<(), Box<dyn
     Ok(())
 }
 
-pub async fn run_tasks_for_dir(dir_path: &str, job_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+pub async fn run_tasks_for_dir(
+    dir_path: &str,
+    job_id: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let files: Vec<PathBuf> = fs::read_dir(dir_path)?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
@@ -42,4 +49,3 @@ pub async fn run_tasks_for_dir(dir_path: &str, job_id: &str) -> Result<(), Box<d
 
     Ok(())
 }
-

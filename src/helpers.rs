@@ -40,27 +40,27 @@ pub fn release_path() -> Result<String, Box<dyn std::error::Error>> {
     ))
 }
 
-pub fn check_program_id() -> Option<String> {
-    let cwd = env::current_dir().ok()?;
-    let toml_path = cwd.join("Cargo.toml");
-    let toml_content = fs::read_to_string(&toml_path).ok()?;
-    let parsed: Value = toml_content.parse().ok()?;
+// pub fn check_program_id() -> Option<String> {
+//     let cwd = env::current_dir().ok()?;
+//     let toml_path = cwd.join("Cargo.toml");
+//     let toml_content = fs::read_to_string(&toml_path).ok()?;
+//     let parsed: Value = toml_content.parse().ok()?;
 
-    let program_id = parsed
-        .get("package")?
-        .get("metadata")?
-        .get("tilt")?
-        .get("program_id")?
-        .as_str()?;
+//     let program_id = parsed
+//         .get("package")?
+//         .get("metadata")?
+//         .get("tilt")?
+//         .get("program_id")?
+//         .as_str()?;
 
-    if program_id.trim() == "{program_id}" {
-        None
-    } else {
-        Some(program_id.to_string())
-    }
-}
+//     if program_id.trim() == "{program_id}" {
+//         None
+//     } else {
+//         Some(program_id.to_string())
+//     }
+// }
 
-pub fn maybe_replace_program_id(custom_toml: &str, program_id: &str) -> String {
+pub fn _maybe_replace_program_id(custom_toml: &str, program_id: &str) -> String {
     if custom_toml.contains("{program_id}") {
         custom_toml.replace("{program_id}", program_id)
     } else {

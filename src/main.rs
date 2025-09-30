@@ -13,14 +13,13 @@ use reqwest::StatusCode;
 use reqwest::multipart;
 use std::env;
 use std::{fs, path::Path, process::Command};
-use toml::Value;
-use uuid::Uuid;
+// use toml::Value;
+// use uuid::Uuid;
 mod custom_lib;
 use auth::sign_in;
-use helpers::check_program_id;
 use helpers::get_package_metadata;
-use helpers::get_project_name;
-use helpers::maybe_replace_program_id;
+// use helpers::get_project_name;
+// use helpers::maybe_replace_program_id;
 use helpers::release_path;
 use helpers::url_from_env;
 use organization::load_organization_id;
@@ -192,16 +191,16 @@ fn build_project() {
         .expect("Failed to execute build");
 
     let status = child.wait().expect("Failed to build project");
-    let program_id = match check_program_id() {
-        Some(id) => id,
-        None => Uuid::new_v4().to_string(),
-    };
+    // let program_id = match check_program_id() {
+    //     Some(id) => id,
+    //     None => Uuid::new_v4().to_string(),
+    // };
     let toml_path = env::current_dir()
         .expect("failed to get current dir")
         .join("Cargo.toml");
-    let toml_content = fs::read_to_string(&toml_path).unwrap();
-    let replaced_toml = maybe_replace_program_id(&toml_content, &program_id);
-    fs::write(toml_path, replaced_toml).unwrap();
+    let _toml_content = fs::read_to_string(&toml_path).unwrap();
+    // let replaced_toml = maybe_replace_program_id(&toml_content, &program_id);
+    // fs::write(toml_path, replaced_toml).unwrap();
     // let package_name = get_project_name();
     // let from_path = release_path(&package_name);
     // let to_path = release_path(&program_id);
@@ -304,17 +303,19 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
     let base_url = url_from_env();
     let url = format!("{}/programs", base_url);
-    let program_id = match check_program_id() {
-        Some(id) => id,
-        None => panic!("Build program before deploying"),
-    };
+    // let program_id = match check_program_id() {
+    //     Some(id) => id,
+    //     None => panic!("Build program before deploying"),
+    // };
+
+    let program = "program";
 
     let filename = release_path()?;
     let file_path = Path::new(&filename);
     let file_bytes = std::fs::read(file_path)?;
 
     let part = multipart::Part::bytes(file_bytes)
-        .file_name(program_id)
+        .file_name(program)
         .mime_str("application/wasm")?;
     let (name, description) = get_package_metadata()?;
     let organization_id = load_selected_organization_id()?;
