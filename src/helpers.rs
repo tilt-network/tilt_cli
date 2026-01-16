@@ -16,8 +16,8 @@ pub fn get_project_name() -> String {
 }
 
 pub fn url_from_env() -> &'static str {
-    let prod_url = "https://production.tilt.rest/";
-    let stg_url = "https://production.tilt.rest/";
+    let prod_url = "https://production.tilt.rest";
+    let stg_url = "https://staging.tilt.rest";
     match env::var("USE_TILT_STAGING") {
         Ok(val) => {
             let val = val.to_ascii_lowercase();
@@ -31,31 +31,36 @@ pub fn url_from_env() -> &'static str {
     prod_url
 }
 
-pub fn release_path(filename: &str) -> String {
-    format!("./target/wasm32-unknown-unknown/release/{}.wasm", filename)
+pub fn release_path() -> Result<String, Box<dyn std::error::Error>> {
+    let md = get_package_metadata()?;
+    let package_name = md.0;
+    Ok(format!(
+        "./target/wasm32-wasip2/release/{}.wasm",
+        package_name.replace("-", "_")
+    ))
 }
 
-pub fn check_program_id() -> Option<String> {
-    let cwd = env::current_dir().ok()?;
-    let toml_path = cwd.join("Cargo.toml");
-    let toml_content = fs::read_to_string(&toml_path).ok()?;
-    let parsed: Value = toml_content.parse().ok()?;
+// pub fn check_program_id() -> Option<String> {
+//     let cwd = env::current_dir().ok()?;
+//     let toml_path = cwd.join("Cargo.toml");
+//     let toml_content = fs::read_to_string(&toml_path).ok()?;
+//     let parsed: Value = toml_content.parse().ok()?;
 
-    let program_id = parsed
-        .get("package")?
-        .get("metadata")?
-        .get("tilt")?
-        .get("program_id")?
-        .as_str()?;
+//     let program_id = parsed
+//         .get("package")?
+//         .get("metadata")?
+//         .get("tilt")?
+//         .get("program_id")?
+//         .as_str()?;
 
-    if program_id.trim() == "{program_id}" {
-        None
-    } else {
-        Some(program_id.to_string())
-    }
-}
+//     if program_id.trim() == "{program_id}" {
+//         None
+//     } else {
+//         Some(program_id.to_string())
+//     }
+// }
 
-pub fn maybe_replace_program_id(custom_toml: &str, program_id: &str) -> String {
+pub fn _maybe_replace_program_id(custom_toml: &str, program_id: &str) -> String {
     if custom_toml.contains("{program_id}") {
         custom_toml.replace("{program_id}", program_id)
     } else {

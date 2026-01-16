@@ -13,22 +13,24 @@ use reqwest::StatusCode;
 use reqwest::multipart;
 use std::env;
 use std::{fs, path::Path, process::Command};
-use toml::Value;
-use uuid::Uuid;
+// use toml::Value;
+// use uuid::Uuid;
 mod custom_lib;
 use auth::sign_in;
-use helpers::check_program_id;
 use helpers::get_package_metadata;
-use helpers::get_project_name;
-use helpers::maybe_replace_program_id;
+// use helpers::get_project_name;
+// use helpers::maybe_replace_program_id;
 use helpers::release_path;
 use helpers::url_from_env;
 use organization::load_organization_id;
 
 use crate::auth::load_auth_token;
+use crate::custom_lib::TILT_BINDINGS;
+use crate::custom_lib::WIT_FILE;
 use crate::entities::program::Program;
 use crate::entities::response::Response;
 use crate::job::create_job;
+use crate::organization::load_selected_organization_id;
 
 fn main() {
     let mut cmd = ClapCommand::new("tilt")
@@ -46,22 +48,25 @@ fn main() {
         .subcommand(ClapCommand::new("create-job").about("Create a job for the current project"))
         .subcommand(ClapCommand::new("organization").about("Select a Tilt organization"))
         .subcommand(
-            ClapCommand::new("signin")
-                .about("Sign in to Tilt")
-                .arg(Arg::new("email").long("email").short('e').required(true))
-                .arg(
-                    Arg::new("password")
-                        .long("password")
-                        .short('p')
-                        .required(true),
-                ),
+            ClapCommand::new("signin").about("Sign in to Tilt").arg(
+                Arg::new("secret_key")
+                    .long("secret_key")
+                    .short('k')
+                    .required(true),
+            ),
         );
 
     let matches = cmd.clone().get_matches();
 
     match matches.subcommand() {
         Some(("new", sub_matches)) => {
-            let project_name = sub_matches.get_one::<String>("name").unwrap();
+            let project_name = match sub_matches.get_one::<String>("name") {
+                Some(pn) => pn,
+                None => {
+                    eprintln!("Project name is required");
+                    return;
+                }
+            };
             create_new_project(project_name);
         }
         Some(("test", _)) => {
@@ -75,17 +80,24 @@ fn main() {
         }
         Some(("list", _)) => {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(list_programs()).unwrap();
+            if let Err(err) = rt.block_on(list_programs()) {
+                println!("Error during listing: {}", err)
+            }
         }
         Some(("deploy", _)) => {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(deploy()).unwrap();
+            let res = rt.block_on(deploy());
+            match res {
+                Ok(_) => {}
+                Err(e) => eprintln!("Error during deployment: {}", e),
+            }
         }
         Some(("signin", sub_matches)) => {
-            let email = sub_matches.get_one::<String>("email").unwrap();
-            let password = sub_matches.get_one::<String>("password").unwrap();
+            let secret_key = sub_matches.get_one::<String>("secret_key").unwrap();
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(sign_in(email, password)).unwrap();
+            if let Err(err) = rt.block_on(sign_in(secret_key)) {
+                println!("Error during sign in: {}", err);
+            }
         }
         Some(("create-job", _)) => {
             let rt = tokio::runtime::Runtime::new().unwrap();
@@ -115,26 +127,35 @@ fn create_new_project(project_name: &String) {
     }
 
     let lib_path = format!("{}/src/lib.rs", project_name);
+    let tilt_bindings_path = format!("{}/src/tilt.rs", project_name);
     let toml_path = format!("{}/Cargo.toml", project_name);
+    let wit_path = format!("{}/wit/tilt_sdk.wit", project_name);
     let custom_lib = CUSTOM_LIB;
+    let tilt_bindings = TILT_BINDINGS;
     let custom_toml = CUSTOM_TOML.replace("{project_name}", project_name);
+    let wit_file = WIT_FILE;
 
     // Add WebAssembly target
     let status = Command::new("rustup")
-        .args(["target", "add", "wasm32-unknown-unknown"])
+        .args(["target", "add", "wasm32-wasip2"])
         .status()
-        .expect("Failed to add wasm32-unknown-unknown target");
+        .expect("Failed to add wasm32-wasip2 target");
 
     if !status.success() {
         eprintln!("Failed to add WebAssembly target");
     }
 
+    let wit_dir = format!("{}/wit", project_name);
+    fs::create_dir_all(&wit_dir).expect("Failed to create wit directory");
+
     fs::write(&lib_path, custom_lib).expect("Failed to write lib.rs");
     fs::write(&toml_path, custom_toml).expect("Failed to write Cargo.toml");
+    fs::write(&tilt_bindings_path, tilt_bindings).expect("Failed to write tilt.rs");
+    fs::write(&wit_path, wit_file).expect("Failed to write tilt.rs");
 
     println!("Project '{}' created successfully!", project_name);
     println!("    cd ./{}", project_name);
-    println!("    tilt test");
+    println!("    tilt-cli test");
 }
 
 fn test_project() {
@@ -165,30 +186,30 @@ fn clean_project() {
 
 fn build_project() {
     let mut child = Command::new("cargo")
-        .args(["build", "--target", "wasm32-unknown-unknown", "--release"])
+        .args(["build", "--target", "wasm32-wasip2", "--release"])
         .spawn()
         .expect("Failed to execute build");
 
     let status = child.wait().expect("Failed to build project");
-    let program_id = match check_program_id() {
-        Some(id) => id,
-        None => Uuid::new_v4().to_string(),
-    };
+    // let program_id = match check_program_id() {
+    //     Some(id) => id,
+    //     None => Uuid::new_v4().to_string(),
+    // };
     let toml_path = env::current_dir()
         .expect("failed to get current dir")
         .join("Cargo.toml");
-    let toml_content = fs::read_to_string(&toml_path).unwrap();
-    let replaced_toml = maybe_replace_program_id(&toml_content, &program_id);
-    fs::write(toml_path, replaced_toml).unwrap();
-    let package_name = get_project_name();
-    let from_path = release_path(&package_name);
-    let to_path = release_path(&program_id);
+    let _toml_content = fs::read_to_string(&toml_path).unwrap();
+    // let replaced_toml = maybe_replace_program_id(&toml_content, &program_id);
+    // fs::write(toml_path, replaced_toml).unwrap();
+    // let package_name = get_project_name();
+    // let from_path = release_path(&package_name);
+    // let to_path = release_path(&program_id);
 
-    if Path::new(&from_path).exists() {
-        fs::rename(from_path, to_path).expect("Failed to rename .wasm file");
-    } else {
-        eprintln!("Expected .wasm file not found, skipping rename");
-    }
+    // if Path::new(&from_path).exists() {
+    //     fs::rename(from_path, to_path).expect("Failed to rename .wasm file");
+    // } else {
+    //     eprintln!("Expected .wasm file not found, skipping rename");
+    // }
 
     if !status.success() {
         eprintln!("Build failed");
@@ -228,8 +249,8 @@ fn print_program_table(data: Vec<Program>) {
 
 async fn list_programs() -> Result<(), Error> {
     // let global_url = String::from(url_from_env());
-    let global_url = "https://production.tilt.rest".to_string();
-    let url = format!("{}/programs", global_url);
+    let base_url = url_from_env();
+    let url = format!("{}/programs", base_url);
     let client = reqwest::Client::new();
     let token = load_auth_token().unwrap();
     let organization_id = load_organization_id(0).unwrap();
@@ -278,25 +299,27 @@ async fn list_programs() -> Result<(), Error> {
 }
 
 async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
+    build_project();
     let client = Client::new();
-    // let global_url = url_from_env();
-    let global_url = "https://production.tilt.rest";
-    let url = format!("{}/programs", global_url);
-    let program_id = match check_program_id() {
-        Some(id) => id,
-        None => panic!("Build program before deploying"),
-    };
+    let base_url = url_from_env();
+    let url = format!("{}/programs", base_url);
+    // let program_id = match check_program_id() {
+    //     Some(id) => id,
+    //     None => panic!("Build program before deploying"),
+    // };
 
-    let filename = release_path(&program_id);
+    let program = "program";
+
+    let filename = release_path()?;
     let file_path = Path::new(&filename);
     let file_bytes = std::fs::read(file_path)?;
 
     let part = multipart::Part::bytes(file_bytes)
-        .file_name(program_id)
+        .file_name(program)
         .mime_str("application/wasm")?;
-    let (name, description) = get_package_metadata().unwrap();
-    let organization_id = load_organization_id(0).unwrap();
-    let token = load_auth_token().unwrap();
+    let (name, description) = get_package_metadata()?;
+    let organization_id = load_selected_organization_id()?;
+    let token = load_auth_token()?;
 
     let form = multipart::Form::new()
         .text("name", name)
@@ -367,7 +390,7 @@ mod tests {
     fn test_build_project() {
         build_project();
 
-        let wasm_dir = Path::new("./target/wasm32-unknown-unknown/release");
+        let wasm_dir = Path::new("./target/wasm32-wasip2/release");
 
         let wasm_file = fs::read_dir(wasm_dir)
             .expect("Failed to read target directory")
@@ -395,8 +418,9 @@ mod tests {
 
         let form = multipart::Form::new().part("file", part);
 
+        let base_url = url_from_env();
         let response = client
-            .post("https://production.tilt.rest/programs")
+            .post(format!("{base_url}/programs"))
             .multipart(form)
             .send()
             .await;
