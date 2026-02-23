@@ -19,5 +19,8 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
+            - name: install clippy
+              run: rustup component add clippy
+
             - name: clippy
               run: cargo clippy
