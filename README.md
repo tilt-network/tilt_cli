@@ -64,7 +64,7 @@ Runs unit tests for your project.
 ### Signing Into Tilt
 
 ```bash
-tilt signin --email your.email@example.com --password your-password
+tilt signin --secret-key <secret_key>
 ```
 
 Authenticates with the Tilt platform and stores your credentials locally.
@@ -88,23 +88,21 @@ Shows a list of your programs deployed to the Tilt platform.
 New projects use a simple template that handles requests and responses:
 
 ```rust
-use serde::{Deserialize, Serialize};
-use tilt_app as tilt;
+mod tilt;
 
-#[derive(Deserialize)]
-pub struct Request {
-    pub arg: String,
+use tilt::*;
+
+struct App;
+
+impl Tilt for App {
+    fn execute(req: Vec<u8>) -> Result<Vec<u8>, Error> {
+        // Create your functionality here.
+
+        Ok(req)
+    }
 }
 
-#[derive(Serialize)]
-pub struct Response {
-    pub arg: String,
-}
-
-#[tilt::main]
-fn main(req: Request) -> Response {
-    Response { arg: req.arg }
-}
+export!(App with_types_in tilt);
 ```
 
 ## Configuration
