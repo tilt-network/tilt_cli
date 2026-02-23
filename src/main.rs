@@ -334,11 +334,13 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
 
-    if response.status() == StatusCode::OK {
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    if status == StatusCode::OK {
         println!("Program deployed successfuly");
-        // println!("Response: {:?}", response.text().await?);
     } else {
-        println!("Failed to upload program");
+        println!("Failed to upload program (status: {})", status);
+        println!("Response body: {}", body);
     }
 
     Ok(())
