@@ -332,8 +332,8 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
     if status == StatusCode::OK {
         println!("Program deployed successfuly");
     } else {
-        println!("Failed to upload program (status: {})", status);
-        println!("Response body: {}", body);
+        println!("Failed to upload program (status: {status})");
+        println!("Response body: {body}");
     }
 
     Ok(())
