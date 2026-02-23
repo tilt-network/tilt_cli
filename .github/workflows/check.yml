@@ -1,0 +1,23 @@
+name: Check
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - dev
+  pull_request:
+    branches-ignore:
+      - main
+      - dev
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: cargo check
+        run: cargo check
