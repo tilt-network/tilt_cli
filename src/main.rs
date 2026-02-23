@@ -1,7 +1,6 @@
 mod auth;
 mod entities;
 mod helpers;
-mod job;
 mod organization;
 mod task;
 
@@ -29,7 +28,6 @@ use crate::custom_lib::TILT_BINDINGS;
 use crate::custom_lib::WIT_FILE;
 use crate::entities::program::Program;
 use crate::entities::response::Response;
-use crate::job::create_job;
 use crate::organization::load_selected_organization_id;
 
 fn main() {
@@ -45,7 +43,6 @@ fn main() {
         .subcommand(ClapCommand::new("clean").about("Clean the Tilt project"))
         .subcommand(ClapCommand::new("list").about("List Tilt programs"))
         .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"))
-        .subcommand(ClapCommand::new("create-job").about("Create a job for the current project"))
         .subcommand(ClapCommand::new("organization").about("Select a Tilt organization"))
         .subcommand(
             ClapCommand::new("signin").about("Sign in to Tilt").arg(
@@ -98,10 +95,6 @@ fn main() {
             if let Err(err) = rt.block_on(sign_in(secret_key)) {
                 println!("Error during sign in: {}", err);
             }
-        }
-        Some(("create-job", _)) => {
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(create_job()).unwrap();
         }
         _ => cmd.print_help().unwrap(),
     }
@@ -334,11 +327,13 @@ async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
 
-    if response.status() == StatusCode::OK {
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    if status == StatusCode::OK {
         println!("Program deployed successfuly");
-        // println!("Response: {:?}", response.text().await?);
     } else {
-        println!("Failed to upload program");
+        println!("Failed to upload program (status: {status})");
+        println!("Response body: {body}");
     }
 
     Ok(())
