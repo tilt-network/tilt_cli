@@ -5,6 +5,12 @@ edition = "2024"
 description = "CLI for interacting with the Tilt distributed processing platform"
 license-file = "LICENSE"
 
+
+[[bin]]
+name = "tilt"
+path = "src/main.rs"
+
+
 [dependencies]
 clap = "4.5.35"
 dirs = "6.0.0"
