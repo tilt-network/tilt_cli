@@ -1,78 +1,12 @@
 use std::fs;
 use std::io::{self, ErrorKind};
 
-use reqwest::Client;
-use serde::Deserialize;
-
-use crate::helpers::url_from_env;
-
-#[derive(Deserialize)]
-pub struct Organization {
-    pub id: String,
-    pub name: String,
-}
-
-#[derive(Deserialize)]
-pub struct OrganizationsResponse {
-    pub data: Vec<Organization>,
-}
-
-fn save_all_organization_ids(ids: &[String]) -> io::Result<()> {
-    let path = dirs::home_dir()
-        .map(|p| p.join(".tilt/organization_id"))
-        .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "Home directory not found"))?;
-
-    let contents = ids.join("\n");
-    fs::write(path, contents)
-}
-
 pub fn save_selected_organization_id(id: String) -> io::Result<()> {
     let path = dirs::home_dir()
         .map(|p| p.join(".tilt/organization_id_selected"))
         .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "Home directory not found"))?;
 
     fs::write(path, id)
-}
-
-pub async fn fetch_and_save_organization_ids(
-    token: String,
-) -> Result<Vec<Organization>, Box<dyn std::error::Error>> {
-    let client = Client::new();
-
-    let base_url = url_from_env();
-    let res = client
-        .get(format!("{base_url}/organizations"))
-        .bearer_auth(token)
-        .send()
-        .await?;
-
-    if !res.status().is_success() {
-        return Err(format!("Request failed: {}", res.status()).into());
-    }
-
-    let orgs: OrganizationsResponse = res.json().await?;
-    if orgs.data.is_empty() {
-        return Err("No organizations found".into());
-    }
-
-    let ids: Vec<String> = orgs.data.iter().map(|org| org.id.clone()).collect();
-    save_all_organization_ids(&ids)?;
-    println!("Saved organization IDs");
-
-    Ok(orgs.data)
-}
-
-pub fn load_organization_id(index: usize) -> io::Result<String> {
-    let path = dirs::home_dir()
-        .map(|p| p.join(".tilt/organization_id"))
-        .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "Home directory not found"))?;
-
-    let contents = fs::read_to_string(path)?;
-    contents
-        .lines()
-        .nth(index)
-        .map(|s| s.to_string())
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, "No organization ID at given index"))
 }
 
 pub fn load_selected_organization_id() -> io::Result<String> {
