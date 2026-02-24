@@ -54,34 +54,9 @@ pub async fn sign_in(secret_key: &str) -> Result<String, Box<dyn std::error::Err
     }
 
     let data: SignInResponse = response.json().await?;
-    let orgs_id = fetch_and_save_organization_ids(data.token.clone()).await?;
-    println!("Select an organization:");
-    for (i, org) in orgs_id.iter().enumerate() {
-        println!("{}: {} ({})", i + 1, org.name, org.id)
-    }
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    let choice: usize = input.trim().parse().unwrap_or(0);
-    if choice == 0 || choice > orgs_id.len() {
-        return Err("Invalid choice".into());
-    }
-    let organization = &orgs_id[choice - 1];
-    println!(
-        "Selected organization: {} ({})",
-        organization.name, organization.id
-    );
-
-    save_selected_organization_id(organization.id.clone())?;
-
-    let response = client
-        .post(format!("{base_url}/organizations/select",))
-        .json(&serde_json::json!({ "organization_id": organization.id }))
-        .bearer_auth(&data.token)
-        .send()
-        .await?;
-    let data: SignInResponse = response.json().await?;
-    save_auth_token(&data.token).unwrap();
+    save_selected_organization_id(data.organization.id.clone())?;
+    save_auth_token(&data.token)?;
+    println!("Authenticated successfully.");
     Ok(data.token)
 }
 
