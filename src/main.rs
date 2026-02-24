@@ -47,8 +47,9 @@ fn main() {
         .subcommand(
             ClapCommand::new("signin").about("Sign in to Tilt").arg(
                 Arg::new("secret_key")
-                    .long("secret_key")
+                    .long("secret-key")
                     .short('k')
+                    .help("Secret API key from your tilt dashboard")
                     .required(true),
             ),
         );
