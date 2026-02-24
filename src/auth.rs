@@ -5,11 +5,17 @@ use reqwest::Client;
 use serde::Deserialize;
 
 use crate::helpers::url_from_env;
-use crate::organization::{fetch_and_save_organization_ids, save_selected_organization_id};
+use crate::organization::save_selected_organization_id;
+
+#[derive(Deserialize)]
+struct OrganizationRef {
+    id: String,
+}
 
 #[derive(Deserialize)]
 struct SignInResponse {
     token: String,
+    organization: OrganizationRef,
 }
 
 fn save_auth_token(token: &str) -> io::Result<()> {
