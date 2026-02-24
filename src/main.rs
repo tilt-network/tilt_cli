@@ -32,25 +32,32 @@ use crate::organization::load_selected_organization_id;
 
 fn main() {
     let mut cmd = ClapCommand::new("tilt")
-        .about("Command Line Application for Tilt network")
+        .about("Build, test, and deploy WebAssembly programs to the Tilt network")
         .subcommand(
             ClapCommand::new("new")
-                .about("Creates a new Tilt project")
-                .arg(Arg::new("name").required(true)),
+                .about("Scaffold a new Tilt project with WebAssembly template and WIT bindings")
+                .arg(
+                    Arg::new("name")
+                        .help("Name of the new project")
+                        .required(true),
+                ),
         )
-        .subcommand(ClapCommand::new("build").about("Build the Tilt project"))
-        .subcommand(ClapCommand::new("test").about("Test the Tilt project"))
-        .subcommand(ClapCommand::new("clean").about("Clean the Tilt project"))
-        .subcommand(ClapCommand::new("list").about("List Tilt programs"))
-        .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"))
-        .subcommand(ClapCommand::new("organization").about("Select a Tilt organization"))
+        .subcommand(ClapCommand::new("build").about("Compile the project to WebAssembly (wasm32-wasip2)"))
+        .subcommand(ClapCommand::new("test").about("Run the project's unit tests"))
+        .subcommand(ClapCommand::new("clean").about("Remove build artifacts"))
+        .subcommand(ClapCommand::new("list").about("List all programs deployed to your organization"))
+        .subcommand(ClapCommand::new("deploy").about("Build and upload the compiled WebAssembly program to Tilt"))
+        .subcommand(ClapCommand::new("organization").about("Select the active Tilt organization"))
         .subcommand(
-            ClapCommand::new("signin").about("Sign in to Tilt").arg(
-                Arg::new("secret_key")
-                    .long("secret_key")
-                    .short('k')
-                    .required(true),
-            ),
+            ClapCommand::new("signin")
+                .about("Sign in to Tilt using your secret API key")
+                .arg(
+                    Arg::new("secret_key")
+                        .long("secret-key")
+                        .short('k')
+                        .help("Secret API key from your Tilt dashboard")
+                        .required(true),
+                ),
         );
 
     let matches = cmd.clone().get_matches();
