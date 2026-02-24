@@ -7,7 +7,6 @@ mod task;
 use clap::{Arg, Command as ClapCommand};
 use custom_lib::{CUSTOM_LIB, CUSTOM_TOML};
 use reqwest::Client;
-use reqwest::Error;
 use reqwest::StatusCode;
 use reqwest::multipart;
 use std::env;
@@ -21,7 +20,6 @@ use helpers::get_package_metadata;
 // use helpers::maybe_replace_program_id;
 use helpers::release_path;
 use helpers::url_from_env;
-use organization::load_organization_id;
 
 use crate::auth::load_auth_token;
 use crate::custom_lib::TILT_BINDINGS;
@@ -43,7 +41,6 @@ fn main() {
         .subcommand(ClapCommand::new("clean").about("Clean the Tilt project"))
         .subcommand(ClapCommand::new("list").about("List Tilt programs"))
         .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"))
-        .subcommand(ClapCommand::new("organization").about("Select a Tilt organization"))
         .subcommand(
             ClapCommand::new("signin").about("Sign in to Tilt").arg(
                 Arg::new("secret_key")
@@ -240,13 +237,13 @@ fn print_program_table(data: Vec<Program>) {
     }
 }
 
-async fn list_programs() -> Result<(), Error> {
+async fn list_programs() -> Result<(), Box<dyn std::error::Error>> {
     // let global_url = String::from(url_from_env());
     let base_url = url_from_env();
     let url = format!("{}/programs", base_url);
     let client = reqwest::Client::new();
     let token = load_auth_token().unwrap();
-    let organization_id = load_organization_id(0).unwrap();
+    let organization_id = load_selected_organization_id()?;
 
     let response = client
         .get(&url)
