@@ -54,7 +54,7 @@ pub async fn sign_in(secret_key: &str) -> Result<String, Box<dyn std::error::Err
     }
 
     let data: SignInResponse = response.json().await?;
-    save_selected_organization_id(data.organization.id.clone())?;
+    save_selected_organization_id(&data.organization.id)?;
     save_auth_token(&data.token)?;
     println!("Authenticated successfully.");
     Ok(data.token)
