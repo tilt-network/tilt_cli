@@ -5,20 +5,18 @@ mod organization;
 mod task;
 
 use anyhow::Result;
-use clap::{Arg, Command as ClapCommand};
+use clap::{Parser, Subcommand};
 use custom_lib::{CUSTOM_LIB, CUSTOM_TOML};
 use reqwest::Client;
 use reqwest::StatusCode;
 use reqwest::multipart;
 use std::env;
 use std::{fs, path::Path, process::Command};
-// use toml::Value;
-// use uuid::Uuid;
+
 mod custom_lib;
+
 use auth::sign_in;
 use helpers::get_package_metadata;
-// use helpers::get_project_name;
-// use helpers::maybe_replace_program_id;
 use helpers::release_path;
 use helpers::url_from_env;
 
@@ -29,72 +27,57 @@ use crate::entities::program::Program;
 use crate::entities::response::Response;
 use crate::organization::load_selected_organization_id;
 
+#[derive(Debug, Parser)]
+#[command(name = "tilt", about = "Command Line Application for Tilt network")]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Debug, Subcommand)]
+enum Commands {
+    New { name: String },
+    Build,
+    Test,
+    Clean,
+    List,
+    Deploy,
+    Signin {
+        #[arg(long = "secret_key", short = 'k')]
+        secret_key: String,
+    },
+}
+
 fn main() {
-    let mut cmd = ClapCommand::new("tilt")
-        .about("Command Line Application for Tilt network")
-        .subcommand(
-            ClapCommand::new("new")
-                .about("Creates a new Tilt project")
-                .arg(Arg::new("name").required(true)),
-        )
-        .subcommand(ClapCommand::new("build").about("Build the Tilt project"))
-        .subcommand(ClapCommand::new("test").about("Test the Tilt project"))
-        .subcommand(ClapCommand::new("clean").about("Clean the Tilt project"))
-        .subcommand(ClapCommand::new("list").about("List Tilt programs"))
-        .subcommand(ClapCommand::new("deploy").about("Deploy the Tilt project"))
-        .subcommand(
-            ClapCommand::new("signin").about("Sign in to Tilt").arg(
-                Arg::new("secret_key")
-                    .long("secret_key")
-                    .short('k')
-                    .required(true),
-            ),
-        );
+    let cli = Cli::parse();
 
-    let matches = cmd.clone().get_matches();
-
-    match matches.subcommand() {
-        Some(("new", sub_matches)) => {
-            let project_name = match sub_matches.get_one::<String>("name") {
-                Some(pn) => pn,
-                None => {
-                    eprintln!("Project name is required");
-                    return;
-                }
-            };
-            create_new_project(project_name);
-        }
-        Some(("test", _)) => {
-            test_project();
-        }
-        Some(("clean", _)) => {
-            clean_project();
-        }
-        Some(("build", _)) => {
-            build_project();
-        }
-        Some(("list", _)) => {
+    match cli.command {
+        Some(Commands::New { name }) => create_new_project(&name),
+        Some(Commands::Test) => test_project(),
+        Some(Commands::Clean) => clean_project(),
+        Some(Commands::Build) => build_project(),
+        Some(Commands::List) => {
             let rt = tokio::runtime::Runtime::new().unwrap();
             if let Err(err) = rt.block_on(list_programs()) {
-                println!("Error during listing: {}", err)
+                eprintln!("Error during listing: {err}");
             }
         }
-        Some(("deploy", _)) => {
+        Some(Commands::Deploy) => {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            let res = rt.block_on(deploy());
-            match res {
-                Ok(_) => {}
-                Err(e) => eprintln!("Error during deployment: {}", e),
+            if let Err(e) = rt.block_on(deploy()) {
+                eprintln!("Error during deployment: {e}");
             }
         }
-        Some(("signin", sub_matches)) => {
-            let secret_key = sub_matches.get_one::<String>("secret_key").unwrap();
+        Some(Commands::Signin { secret_key }) => {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            if let Err(err) = rt.block_on(sign_in(secret_key)) {
-                println!("Error during sign in: {}", err);
+            if let Err(err) = rt.block_on(sign_in(&secret_key)) {
+                eprintln!("Error during sign in: {err}");
             }
         }
-        _ => cmd.print_help().unwrap(),
+        None => {
+            use clap::CommandFactory;
+            Cli::command().print_help().unwrap();
+        }
     }
 }
 
@@ -385,13 +368,11 @@ mod tests {
 
         let wasm_dir = Path::new("./target/wasm32-wasip2/release");
 
-        let wasm_file = fs::read_dir(wasm_dir)
-            .expect("Failed to read target directory")
-            .filter_map(Result::ok)
-            .find(|entry| entry.path().extension().map_or(false, |ext| ext == "wasm"));
-
         assert!(
-            wasm_file.is_some(),
+            fs::read_dir(wasm_dir)
+                .expect("Failed to read target directory")
+                .filter_map(Result::ok)
+                .any(|entry| entry.path().extension().is_some_and(|ext| ext == "wasm")),
             "Expected a .wasm file in the release dir"
         );
     }
