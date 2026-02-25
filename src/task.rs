@@ -1,3 +1,4 @@
+use anyhow::Result;
 use reqwest::Client;
 use reqwest::StatusCode;
 use serde_json::json;
@@ -9,7 +10,7 @@ use crate::helpers::url_from_env;
 pub async fn create_task(
     job_id: &str,
     segment_index: u32,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     let client = Client::new();
     let url = format!("{}/tasks", url_from_env());
 
@@ -36,7 +37,7 @@ pub async fn create_task(
 pub async fn run_tasks_for_dir(
     dir_path: &str,
     job_id: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     let files: Vec<PathBuf> = fs::read_dir(dir_path)?
         .filter_map(Result::ok)
         .map(|entry| entry.path())

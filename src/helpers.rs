@@ -1,5 +1,6 @@
 use std::{env, fs, process::Command};
 
+use anyhow::{Result, anyhow};
 use toml::Value;
 
 pub fn get_project_name() -> String {
@@ -31,7 +32,7 @@ pub fn url_from_env() -> &'static str {
     prod_url
 }
 
-pub fn release_path() -> Result<String, Box<dyn std::error::Error>> {
+pub fn release_path() -> Result<String, anyhow::Error> {
     let md = get_package_metadata()?;
     let package_name = md.0;
     Ok(format!(
@@ -68,7 +69,7 @@ pub fn _maybe_replace_program_id(custom_toml: &str, program_id: &str) -> String 
     }
 }
 
-pub fn get_package_metadata() -> Result<(String, String), Box<dyn std::error::Error>> {
+pub fn get_package_metadata() -> Result<(String, String), anyhow::Error> {
     let cargo_toml_path = env::current_dir()
         .expect("error getting current directory")
         .join("Cargo.toml");
@@ -78,12 +79,12 @@ pub fn get_package_metadata() -> Result<(String, String), Box<dyn std::error::Er
     let package = parsed
         .get("package")
         .and_then(|v| v.as_table())
-        .ok_or("Missing [package] section")?;
+        .ok_or_else(|| anyhow!("Missing [package] section"))?;
 
     let name = package
         .get("name")
         .and_then(|v| v.as_str())
-        .ok_or("Missing 'name' in [package]")?
+        .ok_or_else(|| anyhow!("Missing 'name' in [package]"))?
         .to_string();
 
     let description = package

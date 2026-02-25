@@ -4,6 +4,7 @@ mod helpers;
 mod organization;
 mod task;
 
+use anyhow::Result;
 use clap::{Arg, Command as ClapCommand};
 use custom_lib::{CUSTOM_LIB, CUSTOM_TOML};
 use reqwest::Client;
@@ -237,7 +238,7 @@ fn print_program_table(data: Vec<Program>) {
     }
 }
 
-async fn list_programs() -> Result<(), Box<dyn std::error::Error>> {
+async fn list_programs() -> Result<()> {
     // let global_url = String::from(url_from_env());
     let base_url = url_from_env();
     let url = format!("{}/programs", base_url);
@@ -288,7 +289,7 @@ async fn list_programs() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn deploy() -> Result<(), Box<dyn std::error::Error>> {
+async fn deploy() -> Result<()> {
     build_project();
     let client = Client::new();
     let base_url = url_from_env();

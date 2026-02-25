@@ -1,6 +1,7 @@
 use std::fs::{create_dir_all, read_to_string, write};
 use std::io::{self, ErrorKind};
 
+use anyhow::{Result, bail};
 use reqwest::Client;
 use serde::Deserialize;
 
@@ -39,7 +40,7 @@ fn create_tilt_directory() -> io::Result<()> {
     Ok(())
 }
 
-pub async fn sign_in(secret_key: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn sign_in(secret_key: &str) -> Result<String> {
     create_tilt_directory()?;
     let client = Client::new();
     let base_url = url_from_env();
@@ -50,7 +51,7 @@ pub async fn sign_in(secret_key: &str) -> Result<String, Box<dyn std::error::Err
         .await?;
 
     if !response.status().is_success() {
-        return Err(format!("Sign-in failed with status: {}", response.status()).into());
+        bail!("Sign-in failed with status: {}", response.status());
     }
 
     let data: SignInResponse = response.json().await?;
