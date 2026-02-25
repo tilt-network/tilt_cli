@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::{self, ErrorKind};
 
-pub fn save_selected_organization_id(id: String) -> io::Result<()> {
+pub fn save_selected_organization_id(id: &str) -> io::Result<()> {
     let path = dirs::home_dir()
         .map(|p| p.join(".tilt/organization_id_selected"))
         .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "Home directory not found"))?;
