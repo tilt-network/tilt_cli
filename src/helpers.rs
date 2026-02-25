@@ -1,20 +1,7 @@
-use std::{env, fs, process::Command};
+use std::{env, fs};
 
 use anyhow::{Result, anyhow};
 use toml::Value;
-
-pub fn get_project_name() -> String {
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg("cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name'")
-        .output()
-        .expect("Failed to execute shell command");
-
-    String::from_utf8(output.stdout)
-        .expect("Invalid UTF-8 in output")
-        .trim()
-        .to_string()
-}
 
 pub fn url_from_env() -> &'static str {
     let prod_url = "https://production.tilt.rest";
@@ -27,7 +14,7 @@ pub fn url_from_env() -> &'static str {
             }
         }
         Err(env::VarError::NotPresent) => return prod_url,
-        Err(_) => return prod_url, // Covers VarError::NotUnicode
+        Err(_) => return prod_url,
     }
     prod_url
 }
@@ -40,26 +27,6 @@ pub fn release_path() -> Result<String, anyhow::Error> {
         package_name.replace("-", "_")
     ))
 }
-
-// pub fn check_program_id() -> Option<String> {
-//     let cwd = env::current_dir().ok()?;
-//     let toml_path = cwd.join("Cargo.toml");
-//     let toml_content = fs::read_to_string(&toml_path).ok()?;
-//     let parsed: Value = toml_content.parse().ok()?;
-
-//     let program_id = parsed
-//         .get("package")?
-//         .get("metadata")?
-//         .get("tilt")?
-//         .get("program_id")?
-//         .as_str()?;
-
-//     if program_id.trim() == "{program_id}" {
-//         None
-//     } else {
-//         Some(program_id.to_string())
-//     }
-// }
 
 pub fn _maybe_replace_program_id(custom_toml: &str, program_id: &str) -> String {
     if custom_toml.contains("{program_id}") {

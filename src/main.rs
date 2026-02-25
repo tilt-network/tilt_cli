@@ -10,7 +10,6 @@ use custom_lib::{CUSTOM_LIB, CUSTOM_TOML};
 use reqwest::Client;
 use reqwest::StatusCode;
 use reqwest::multipart;
-use std::env;
 use std::{fs, path::Path, process::Command};
 
 mod custom_lib;
@@ -109,7 +108,6 @@ fn create_new_project(project_name: &String) {
     let custom_toml = CUSTOM_TOML.replace("{project_name}", project_name);
     let wit_file = WIT_FILE;
 
-    // Add WebAssembly target
     let status = Command::new("rustup")
         .args(["target", "add", "wasm32-wasip2"])
         .status()
@@ -165,25 +163,6 @@ fn build_project() {
         .expect("Failed to execute build");
 
     let status = child.wait().expect("Failed to build project");
-    // let program_id = match check_program_id() {
-    //     Some(id) => id,
-    //     None => Uuid::new_v4().to_string(),
-    // };
-    let toml_path = env::current_dir()
-        .expect("failed to get current dir")
-        .join("Cargo.toml");
-    let _toml_content = fs::read_to_string(&toml_path).unwrap();
-    // let replaced_toml = maybe_replace_program_id(&toml_content, &program_id);
-    // fs::write(toml_path, replaced_toml).unwrap();
-    // let package_name = get_project_name();
-    // let from_path = release_path(&package_name);
-    // let to_path = release_path(&program_id);
-
-    // if Path::new(&from_path).exists() {
-    //     fs::rename(from_path, to_path).expect("Failed to rename .wasm file");
-    // } else {
-    //     eprintln!("Expected .wasm file not found, skipping rename");
-    // }
 
     if !status.success() {
         eprintln!("Build failed");
@@ -191,9 +170,7 @@ fn build_project() {
 }
 
 fn print_program_table(data: Vec<Program>) {
-    // largura máxima da coluna Name
     let name_width = 20;
-    // cabeçalho
     println!(
         "{:<name_width$} | {}",
         "Name",
@@ -207,22 +184,17 @@ fn print_program_table(data: Vec<Program>) {
         name_width = name_width,
         desc_width = 50
     );
-    // linhas
     for item in data {
-        // pega ou default
         let mut name = item.name.clone().unwrap_or_else(|| "Unnamed".into());
-        // trunca se ultrapassar
         if name.chars().count() > name_width {
             name = name.chars().take(name_width - 3).collect::<String>() + "...";
         }
         let desc = item.description.clone().unwrap_or_else(|| "-".into());
-        // imprime: Name (padded à esquerda) | Description
         println!("{:<name_width$} | {}", name, desc, name_width = name_width);
     }
 }
 
 async fn list_programs() -> Result<()> {
-    // let global_url = String::from(url_from_env());
     let base_url = url_from_env();
     let url = format!("{}/programs", base_url);
     let client = reqwest::Client::new();
@@ -249,26 +221,6 @@ async fn list_programs() -> Result<()> {
 
     print_program_table(data);
 
-    // if let Some(data) = response.get("data").and_then(|v| v.as_array()) {
-    //     if data.is_empty() {
-    //         println!("No programs found.");
-    //     } else {
-    //         for item in data {
-    //             let name = item
-    //                 .get("name")
-    //                 .and_then(|v| v.as_str())
-    //                 .unwrap_or("Unnamed");
-    //             let description = item
-    //                 .get("description")
-    //                 .and_then(|v| v.as_str())
-    //                 .unwrap_or("-");
-    //             println!("{} — {}", name, description);
-    //         }
-    //     }
-    // } else {
-    //     println!("Unexpected response format.");
-    // }
-
     Ok(())
 }
 
@@ -277,10 +229,6 @@ async fn deploy() -> Result<()> {
     let client = Client::new();
     let base_url = url_from_env();
     let url = format!("{}/programs", base_url);
-    // let program_id = match check_program_id() {
-    //     Some(id) => id,
-    //     None => panic!("Build program before deploying"),
-    // };
 
     let program = "program";
 
