@@ -8,14 +8,14 @@ use crate::helpers::url_from_env;
 use crate::organization::save_selected_organization_id;
 
 #[derive(Deserialize)]
-struct OrganizationRef {
+struct OrganizationId {
     id: String,
 }
 
 #[derive(Deserialize)]
 struct SignInResponse {
     token: String,
-    organization: OrganizationRef,
+    organization: OrganizationId,
 }
 
 fn save_auth_token(token: &str) -> io::Result<()> {
