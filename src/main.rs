@@ -1,4 +1,5 @@
 mod auth;
+mod commands;
 mod entities;
 mod helpers;
 mod organization;
@@ -35,12 +36,19 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    /// Creates a new Tilt project
     New { name: String },
+    /// Build the Tilt project
     Build,
+    /// Test the Tilt project
     Test,
+    /// Clean the Tilt project
     Clean,
+    /// List Tilt programs
     List,
+    /// Deploy the Tilt project
     Deploy,
+    /// Sign in to Tilt
     Signin {
         #[arg(long = "secret_key", short = 'k')]
         secret_key: String,
@@ -171,7 +179,11 @@ fn build_project() {
 
 fn print_program_table(data: Vec<Program>) {
     let name_width = 20;
-    println!("{:<name_width$} | Description", "Name", name_width = name_width);
+    println!(
+        "{:<name_width$} | Description",
+        "Name",
+        name_width = name_width
+    );
     println!(
         "{:-<name_width$}-+-{:-<desc_width$}",
         "",
