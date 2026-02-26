@@ -42,7 +42,7 @@ impl Run for New {
             .expect("Failed to add wasm32-wasip2 target");
 
         if !status.success() {
-            eprintln!("Failed to add WebAssemblytarget");
+            eprintln!("Failed to add WebAssembly target");
         }
 
         fs::create_dir_all(format!("{name}/wit")).expect("Failed to create directory");
