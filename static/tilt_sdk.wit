@@ -1,0 +1,27 @@
+package tilt:app@0.1.0;
+
+world tilt {
+    record error {
+        kind: error-kind,
+        message: string,
+    }
+
+    enum error-kind {
+        /// Invalid payload
+        invalid,
+        /// Payload too large
+        too-large,
+        /// Not supported
+        unsupported,
+        /// Not enough space, similar to `ENOMEM` in POSIX.
+        insufficient-memory,
+        /// No space left on device, similar to `ENOSPC` in POSIX.
+        insufficient-space,
+        /// Operation not permitted, similar to `EPERM` in POSIX.
+        not-permitted,
+        /// An unknown error occurred.
+        unknown,
+    }
+
+    export execute: func(req: list<u8>) -> result<list<u8>, error>;
+}
