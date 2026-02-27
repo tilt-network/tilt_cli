@@ -2,19 +2,19 @@ use anyhow::{Context, Result};
 use clap::Args;
 use std::{fs, process::Command};
 
-use crate::{
-    commands::Run,
-    custom_lib::{CUSTOM_LIB, CUSTOM_TOML, TILT_BINDINGS, WIT_FILE},
-};
+pub const CUSTOM_LIB: &str = include_str!("../../static/lib.rs.template");
+pub const TILT_BINDINGS: &str = include_str!("../../static/tilt.rs.template");
+pub const CUSTOM_TOML: &str = include_str!("../../static/Cargo.toml.template");
+pub const WIT_FILE: &str = include_str!("../../static/tilt_sdk.wit.template");
 
-/// Create a new tilt program
 #[derive(Debug, Args)]
 pub struct New {
-    pub name: String,
+    #[arg(short = 'n', long)]
+    name: String,
 }
 
-impl Run for New {
-    async fn run(&self) -> Result<()> {
+impl New {
+    pub async fn run(&self) -> Result<()> {
         let name = &self.name;
 
         let output = Command::new("cargo")

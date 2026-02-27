@@ -2,14 +2,11 @@ use anyhow::{Context, Result};
 use clap::Args;
 use std::process::Command;
 
-use crate::commands::Run;
-
-/// Run the tests on your program
 #[derive(Debug, Args)]
 pub struct Test;
 
-impl Run for Test {
-    async fn run(&self) -> Result<()> {
+impl Test {
+    pub async fn run(&self) -> Result<()> {
         let mut child = Command::new("cargo")
             .arg("test")
             .spawn()

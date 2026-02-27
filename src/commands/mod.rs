@@ -1,5 +1,4 @@
 mod build;
-mod clean;
 mod deploy;
 mod list;
 mod new;
@@ -9,18 +8,19 @@ mod test;
 use anyhow::Result;
 use clap::Subcommand;
 
-pub trait Run {
-    async fn run(&self) -> Result<()>;
-}
-
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    /// Create a new tilt program.
     New(new::New),
+    /// Build your tilt program.
     Build(build::Build),
-    Clean(clean::Clean),
+    /// Deploy your program to tilt network.
     Deploy(deploy::Deploy),
+    /// List your tilt programs.
     List(list::List),
+    /// Sign in to your tilt account with your private key.
     Signin(signin::Signin),
+    /// Run the tests on your program.
     Test(test::Test),
 }
 
@@ -29,7 +29,6 @@ impl Commands {
         match self {
             Commands::New(command) => command.run().await,
             Commands::Build(command) => command.run().await,
-            Commands::Clean(command) => command.run().await,
             Commands::Deploy(command) => command.run().await,
             Commands::List(command) => command.run().await,
             Commands::Signin(command) => command.run().await,

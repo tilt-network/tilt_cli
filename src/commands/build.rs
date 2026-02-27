@@ -2,18 +2,15 @@ use anyhow::{Context, Result};
 use clap::Args;
 use std::process::Command;
 
-use crate::commands::Run;
-
-/// Build your tilt program
 #[derive(Debug, Args)]
-pub struct Build;
+pub struct Build {}
 
-impl Run for Build {
-    async fn run(&self) -> Result<()> {
+impl Build {
+    pub async fn run(&self) -> Result<()> {
         let mut child = Command::new("cargo")
             .args(["build", "--target", "wasm32-wasip2", "--release"])
             .spawn()
-            .context("Failed to perform build. Do you have rust installed?")?;
+            .context("Failed to perform build. Do you have Rust installed?")?;
 
         let status = child
             .wait()
@@ -32,7 +29,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_build() {
-        let build = Build;
+        let build = Build {};
         let result = build.run().await;
         assert!(result.is_ok());
     }
