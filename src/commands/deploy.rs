@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Args;
 use reqwest::{Client, multipart};
-use std::path::Path;
+use std::{path::Path, time::Duration};
 
 use crate::{
     auth::load_auth_token,
@@ -12,13 +12,19 @@ use crate::{
 
 /// Deploy your program to tilt network
 #[derive(Debug, Args)]
-pub struct Deploy;
+pub struct Deploy {
+    /// Skip the build step and deploy existing binary
+    #[arg(long, default_value_t = false)]
+    pub skip_build: bool,
+}
 
 impl Run for Deploy {
     async fn run(&self) -> Result<()> {
-        Build.run().await?;
+        if !self.skip_build {
+            Build.run().await?;
+        }
 
-        let client = Client::new();
+        let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
         let base_url = url_from_env();
         let url = format!("{base_url}/programs");
 

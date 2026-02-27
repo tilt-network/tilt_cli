@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Args;
 use std::{fs, process::Command};
 
@@ -20,19 +20,18 @@ impl Run for New {
         let output = Command::new("cargo")
             .args(["new", "--lib", name])
             .output()
-            .expect("Failed to create a new program. Do you have rust installed?");
+            .context("Failed to create a new program. Do you have rust installed?")?;
 
         if !output.status.success() {
             match output.status.code() {
                 Some(101) => {
-                    println!("Error: Project '{name}' already exists! Try something new.")
+                    anyhow::bail!("Error: Project '{name}' already exists! Try something new.")
                 }
                 _ => eprintln!(
                     "Error: something went wrong while creating the project '{name}': {}. ",
                     String::from_utf8_lossy(&output.stderr)
                 ),
             }
-            return Ok(());
         }
 
         let custom_toml = CUSTOM_TOML.replace("{project_name}", name);

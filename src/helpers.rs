@@ -1,44 +1,26 @@
-use std::{env, fs};
+use std::{env, fs, path::PathBuf};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use toml::Value;
 
 pub fn url_from_env() -> &'static str {
-    let prod_url = "https://production.tilt.rest";
-    let stg_url = "https://staging.tilt.rest";
-    match env::var("USE_TILT_STAGING") {
-        Ok(val) => {
-            let val = val.to_ascii_lowercase();
-            if val == "true" || val == "1" {
-                return stg_url;
-            }
-        }
-        Err(env::VarError::NotPresent) => return prod_url,
-        Err(_) => return prod_url,
+    match env::var("USE_TILT_STAGING").as_deref() {
+        Ok("true") | Ok("1") => "https://staging.tilt.rest",
+        _ => "https://production.tilt.rest",
     }
-    prod_url
 }
 
-pub fn release_path() -> Result<String, anyhow::Error> {
-    let md = get_package_metadata()?;
-    let package_name = md.0;
+pub fn release_path() -> Result<String> {
+    let (name, _) = get_package_metadata()?;
     Ok(format!(
         "./target/wasm32-wasip2/release/{}.wasm",
-        package_name.replace("-", "_")
+        name.replace("-", "_")
     ))
 }
 
-pub fn _maybe_replace_program_id(custom_toml: &str, program_id: &str) -> String {
-    if custom_toml.contains("{program_id}") {
-        custom_toml.replace("{program_id}", program_id)
-    } else {
-        custom_toml.to_string()
-    }
-}
-
-pub fn get_package_metadata() -> Result<(String, String), anyhow::Error> {
+pub fn get_package_metadata() -> Result<(String, String)> {
     let cargo_toml_path = env::current_dir()
-        .expect("error getting current directory")
+        .context("error getting current directory")?
         .join("Cargo.toml");
     let cargo_toml_content = fs::read_to_string(cargo_toml_path)?;
     let parsed: Value = cargo_toml_content.parse::<Value>()?;
@@ -61,4 +43,10 @@ pub fn get_package_metadata() -> Result<(String, String), anyhow::Error> {
         .to_string();
 
     Ok((name, description))
+}
+
+pub fn tilt_dir() -> Result<PathBuf> {
+    dirs::home_dir()
+        .map(|p| p.join(".tilt"))
+        .ok_or_else(|| anyhow!("Home directory not found"))
 }

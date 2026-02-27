@@ -4,7 +4,6 @@ mod custom_lib;
 mod entities;
 mod helpers;
 mod organization;
-mod task;
 
 use anyhow::Result;
 use clap::Parser;

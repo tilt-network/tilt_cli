@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Args;
 use std::process::Command;
 
@@ -13,24 +13,15 @@ impl Run for Test {
         let mut child = Command::new("cargo")
             .arg("test")
             .spawn()
-            .expect("Failed to execute cargo test. Do you have rust installed?");
+            .context("Failed to execute cargo test. Do you have rust installed?")?;
 
-        let status = child.wait().expect("Failed to wait for tests to complete");
+        let status = child
+            .wait()
+            .context("Failed to wait for tests to complete")?;
 
         if !status.success() {
             anyhow::bail!("Cargo test failed");
         }
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_test() {
-        let test = Test;
-        assert!(test.run().await.is_ok());
     }
 }

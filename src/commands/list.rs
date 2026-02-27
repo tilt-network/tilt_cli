@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use clap::Args;
 use reqwest::Client;
@@ -18,7 +20,7 @@ impl Run for List {
     async fn run(&self) -> Result<()> {
         let base_url = url_from_env();
         let url = format!("{base_url}/programs");
-        let client = Client::new();
+        let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
         let token = load_auth_token()?;
         let organization_id = load_selected_organization_id()?;
 
@@ -47,8 +49,9 @@ impl Run for List {
 
 fn print_table(data: Vec<Program>) {
     let name_width = 20;
+    let desc_width = 50;
     println!("{:<name_width$} | Description", "Name");
-    println!("{:-<name_width$}-+-{:-<50}", "", "");
+    println!("{:-<name_width$}-+-{:-<desc_width$}", "", "");
     for item in data {
         let mut name = item.name.unwrap_or_else(|| "Unnamed".into());
         if name.chars().count() > name_width {

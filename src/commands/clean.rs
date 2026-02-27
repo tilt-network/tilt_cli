@@ -1,5 +1,5 @@
 use crate::commands::Run;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Args;
 use std::process::Command;
 
@@ -12,9 +12,9 @@ impl Run for Clean {
         let mut child = Command::new("cargo")
             .arg("clean")
             .spawn()
-            .expect("Failed to execute cargo clean. Do you have rust installed");
+            .context("Failed to execute cargo clean. Do you have rust installed")?;
 
-        let status = child.wait().expect("Failed to wait for cargo clean");
+        let status = child.wait().context("Failed to wait for cargo clean")?;
 
         if !status.success() {
             anyhow::bail!("Cargo clean failed")
