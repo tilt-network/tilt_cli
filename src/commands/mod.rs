@@ -9,8 +9,6 @@ mod test;
 use anyhow::Result;
 use clap::Subcommand;
 
-use crate::commands::build::Build;
-
 pub trait Run {
     async fn run(&self) -> Result<()>;
 }

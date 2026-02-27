@@ -10,6 +10,7 @@ use crate::{
     organization::load_selected_organization_id,
 };
 
+/// Deploy your program to tilt network
 #[derive(Debug, Args)]
 pub struct Deploy;
 

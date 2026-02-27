@@ -7,6 +7,7 @@ use crate::{
     custom_lib::{CUSTOM_LIB, CUSTOM_TOML, TILT_BINDINGS, WIT_FILE},
 };
 
+/// Create a new tilt program
 #[derive(Debug, Args)]
 pub struct New {
     pub name: String,

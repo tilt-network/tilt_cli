@@ -4,6 +4,7 @@ use std::process::Command;
 
 use crate::commands::Run;
 
+/// Run the tests on your program
 #[derive(Debug, Args)]
 pub struct Test;
 

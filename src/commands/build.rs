@@ -4,6 +4,7 @@ use std::process::Command;
 
 use crate::commands::Run;
 
+/// Build your tilt program
 #[derive(Debug, Args)]
 pub struct Build;
 

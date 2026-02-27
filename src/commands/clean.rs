@@ -3,6 +3,7 @@ use anyhow::Result;
 use clap::Args;
 use std::process::Command;
 
+/// Clean your tilt program
 #[derive(Debug, Args)]
 pub struct Clean;
 

@@ -10,6 +10,7 @@ use crate::{
     organization::load_selected_organization_id,
 };
 
+/// List your tilt programs
 #[derive(Debug, Args)]
 pub struct List;
 
