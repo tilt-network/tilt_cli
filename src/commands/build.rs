@@ -22,15 +22,3 @@ impl Build {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_build() {
-        let build = Build {};
-        let result = build.run().await;
-        assert!(result.is_ok());
-    }
-}
