@@ -24,3 +24,14 @@ jobs:
 
             - name: clippy
               run: cargo clippy -- -D warnings
+
+    test:
+        runs-on: ubuntu-latest
+        container:
+            image: rust:latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: test
+              run: cargo test
