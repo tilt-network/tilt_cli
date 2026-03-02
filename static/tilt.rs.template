@@ -1,21 +1,4 @@
-pub const CUSTOM_LIB: &str = r#"mod tilt;
-
-use tilt::*;
-
-struct App;
-
-impl Tilt for App {
-    fn execute(req: Vec<u8>) -> Result<Vec<u8>, Error> {
-        // Create your functionality here.
-
-        Ok(req)
-    }
-}
-
-export!(App with_types_in tilt);
-"#;
-
-pub const TILT_BINDINGS: &str = r#"#![allow(warnings)]
+#![allow(warnings)]
 
 // Options used:
 //   * runtime_path: "wit_bindgen_rt"
@@ -246,53 +229,3 @@ component\x070.227.1\x10wit-bindgen-rust\x060.41.0";
 pub fn __link_custom_section_describing_imports() {
     wit_bindgen_rt::maybe_link_cabi_realloc();
 }
-"#;
-
-pub const CUSTOM_TOML: &str = r#"[package]
-name = "{project_name}"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-wit-bindgen-rt = { version = "0.44.0", features = ["bitflags"] }
-
-[lib]
-crate-type = ["cdylib"]
-
-[package.metadata.component]
-package = "tilt:sdk"
-
-[package.metadata.component.dependencies]
-
-[package.metadata.tilt]
-program_id = "{program_id}"
-"#;
-
-pub const WIT_FILE: &str = r#"package tilt:app@0.1.0;
-
-world tilt {
-    record error {
-        kind: error-kind,
-        message: string,
-    }
-
-    enum error-kind {
-        /// Invalid payload
-        invalid,
-        /// Payload too large
-        too-large,
-        /// Not supported
-        unsupported,
-        /// Not enough space, similar to `ENOMEM` in POSIX.
-        insufficient-memory,
-        /// No space left on device, similar to `ENOSPC` in POSIX.
-        insufficient-space,
-        /// Operation not permitted, similar to `EPERM` in POSIX.
-        not-permitted,
-        /// An unknown error occurred.
-        unknown,
-    }
-
-    export execute: func(req: list<u8>) -> result<list<u8>, error>;
-}
-"#;
