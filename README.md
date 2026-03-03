@@ -1,4 +1,4 @@
-Tilt CLI
+# Tilt CLI
 
 A command-line tool for working with the Tilt network, enabling developers to create, build, test, and deploy WebAssembly programs to the Tilt platform.
 
@@ -6,14 +6,21 @@ A command-line tool for working with the Tilt network, enabling developers to cr
 
 ### Prerequisites
 
-- [Rust](https://www.rust-lang.org/tools/install)
-- [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-- WebAssembly target: `rustup target add wasm32-unknown-unknown`
+- [Rust](https://www.rust-lang.org/tools/install) and Cargo
+- WebAssembly target: `rustup target add wasm32-wasip2`
 
-### Installation
+### From crates.io
 
 ```bash
 cargo install tilt-cli
+```
+
+### From source
+
+```bash
+git clone https://github.com/your-org/tilt_cli
+cd tilt_cli
+make install
 ```
 
 ## Usage
@@ -25,55 +32,65 @@ USAGE:
     tilt [SUBCOMMAND]
 
 SUBCOMMANDS:
-    new          Creates a new Tilt project
-    build        Build the Tilt project
-    test         Test the Tilt project
-    clean        Clean the Tilt project
-    list         List Tilt programs
-    deploy       Deploy the Tilt project
-    signin       Sign in to Tilt
-    create-job   Create a job for the current project
-    help         Print this message or the help of the given subcommand(s)
+    new       Create a new Tilt program
+    build     Build the program to WebAssembly
+    test      Run the program's tests
+    list      List your deployed programs
+    deploy    Deploy the program to the Tilt network
+    signin    Sign in to your Tilt account
+    help      Print this message or the help of the given subcommand(s)
 ```
 
 ### Creating a New Program
 
 ```bash
-tilt new my-tilt-program
+tilt new --name my-tilt-program
 ```
 
-This creates a new Rust project configured for WebAssembly compilation and the Tilt platform.
+This scaffolds a new Rust project pre-configured for WebAssembly compilation and the Tilt platform. The generated structure includes:
 
-### Building Your Project
+```
+my-tilt-program/
+├── src/
+│   ├── lib.rs       # Your program's entry point
+│   └── tilt.rs      # Tilt bindings (do not edit)
+├── wit/
+│   └── tilt_sdk.wit # WIT interface definition
+└── Cargo.toml
+```
+
+### Building Your Program
 
 ```bash
-cd my-tilt-project
+cd my-tilt-program
 tilt build
 ```
 
-This compiles your project to WebAssembly and prepares it for deployment.
+Compiles the project to WebAssembly (`wasm32-wasip2`) in release mode, generating the `.wasm` binary under `target/wasm32-wasip2/release/`.
 
-### Testing Your Project
+### Testing Your Program
 
 ```bash
 tilt test
 ```
 
-Runs unit tests for your project.
+Runs the unit tests via `cargo test`.
 
-### Signing Into Tilt
+### Signing In
 
 ```bash
-tilt signin --secret-key <secret_key>
+tilt signin --secret-key <your_secret_key>
 ```
 
-Authenticates with the Tilt platform and stores your credentials locally.
+Authenticates with the Tilt platform and stores your token and organization ID locally under `~/.tilt/`. You can find your secret key in the [Tilt Console](https://tilt.rest) under **User → Settings**, right after selecting your organization.
 
-### Deploying Your Project
+### Deploying Your Program
 
 ```bash
 tilt deploy
 ```
+
+Builds the project (if not already built) and uploads the `.wasm` binary to the Tilt network under your authenticated organization. Requires a prior `tilt signin`.
 
 ### Listing Your Programs
 
@@ -81,11 +98,11 @@ tilt deploy
 tilt list
 ```
 
-Shows a list of your programs deployed to the Tilt platform.
+Shows all programs deployed to your organization on the Tilt platform.
 
 ## Program Template
 
-New projects use a simple template that handles requests and responses:
+New projects start with a simple template that receives and returns raw bytes:
 
 ```rust
 mod tilt;
@@ -96,8 +113,7 @@ struct App;
 
 impl Tilt for App {
     fn execute(req: Vec<u8>) -> Result<Vec<u8>, Error> {
-        // Create your functionality here.
-
+        // Your logic here.
         Ok(req)
     }
 }
@@ -107,9 +123,12 @@ export!(App with_types_in tilt);
 
 ## Configuration
 
-The `Cargo.toml` file includes Tilt-specific metadata:
+The generated `Cargo.toml` includes Tilt-specific metadata used during deployment:
 
 ```toml
 [package.metadata.tilt]
-program_id = "..."  # Unique identifier for your program, do not change this value
+program_id = "..."  # Unique identifier for your program — do not change this value
+
+[package.metadata.component]
+package = "tilt:sdk"
 ```
