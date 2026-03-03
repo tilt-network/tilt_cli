@@ -82,7 +82,7 @@ Runs the unit tests via `cargo test`.
 tilt signin --secret-key <your_secret_key>
 ```
 
-Authenticates with the Tilt platform and stores your token and organization ID locally under `~/.tilt/`. You can find your secret key in the [Tilt Console](https://tilt.rest) under **User → Settings**, right after selecting your organization.
+You can find your secret key in the **Tilt Console under** **User → Settings**, right after selecting your organization.
 
 ### Deploying Your Program
 
