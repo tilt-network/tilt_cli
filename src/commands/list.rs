@@ -67,13 +67,24 @@ struct Program {
 
 fn print_table(data: &[Program]) {
     let max_name_width = 20;
+    let id_width = 36;
     let desc_width = 50;
-    println!("{:<max_name_width$} | Description", "Name");
-    println!("{:-<max_name_width$}-+-{:-<desc_width$}", "", "");
+    println!(
+        "{:<max_name_width$} | {:<id_width$} | Description",
+        "Name", "Program ID"
+    );
+    println!(
+        "{:-<max_name_width$}-+-{:-<id_width$}-+-{:-<desc_width$}",
+        "", "", ""
+    );
     for item in data {
         let name = item.name.as_deref().unwrap_or("Unnamed");
         let name = &name[..name.len().min(max_name_width)];
+        let id = item
+            .id
+            .map(|u| u.to_string())
+            .unwrap_or_else(|| "-".to_string());
         let desc = item.description.as_deref().unwrap_or("-");
-        println!("{name:<max_name_width$} | {desc}");
+        println!("{name:<max_name_width$} | {id:<id_width$} | {desc}");
     }
 }
