@@ -9,7 +9,7 @@ pub use organization::*;
 
 /// Returns the base URL to be used for API requests.
 pub fn url_from_env() -> &'static str {
-    match env::var("USE_ENV").as_deref() {
+    match env::var("ENVIRONMENT").as_deref() {
         Ok("staging") => "https://staging.tilt.rest",
         Ok("production") => "https://production.tilt.rest",
         Ok("local") => "http://localhost:3000",
