@@ -1,0 +1,90 @@
+// Auto-generated Tilt JS bindings for template projects.
+
+/** @readonly @enum {number} */
+export const TiltErrorKind = {
+    /** Invalid payload */
+    invalid: 0,
+    /** Payload too large */
+    too_large: 1,
+    /** Not supported */
+    unsupported: 2,
+    /** Not enough space, similar to `ENOMEM` in POSIX. */
+    insufficient_memory: 3,
+    /** No space left on device, similar to `ENOSPC` in POSIX. */
+    insufficient_space: 4,
+    /** Operation not permitted, similar to `EPERM` in POSIX. */
+    not_permitted: 5,
+    /** An unknown error occurred. */
+    unknown: 6,
+};
+
+/**
+ * @typedef {Object} TiltError
+ * @property {number} kind
+ * @property {string} message
+ */
+
+/**
+ * @template T
+ * @typedef {{ tag: "some", val: T }} Some
+ */
+
+/**
+ * @template T
+ * @typedef {{ tag: "none" }} None
+ */
+
+/**
+ * @template T
+ * @typedef {Some<T> | None<T>} Option
+ */
+
+/**
+ * @template T
+ * @param {T} val
+ * @returns {Option<T>}
+ */
+export function some(val) {
+    return { tag: "some", val };
+}
+
+/**
+ * @template T
+ * @returns {Option<T>}
+ */
+export function none() {
+    return { tag: "none" };
+}
+
+/**
+ * @template T
+ * @typedef {{ tag: "ok", val: T }} Ok
+ */
+
+/**
+ * @template E
+ * @typedef {{ tag: "err", val: E }} Err
+ */
+
+/**
+ * @template T, E
+ * @typedef {Ok<T> | Err<E>} Result
+ */
+
+/**
+ * @template T, E
+ * @param {T} val
+ * @returns {Result<T, E>}
+ */
+export function ok(val) {
+    return { tag: "ok", val };
+}
+
+/**
+ * @template T, E
+ * @param {E} val
+ * @returns {Result<T, E>}
+ */
+export function err(val) {
+    return { tag: "err", val };
+}

@@ -1,0 +1,22 @@
+{
+  "name": "{project_name}",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "componentize-js src/index.js --wit wit/tilt_sdk.wit -o dist/index.component.wasm",
+    "test": "echo \"No tests configured\" && exit 0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.20.0",
+  "dependencies": {
+    "@bytecodealliance/componentize-js": "^0.19.3"
+  },
+  "metadata": {
+    "tilt": {
+      "program_id": ""
+    }
+  }
+}
