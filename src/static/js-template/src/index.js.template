@@ -1,0 +1,10 @@
+// Entry point for Tilt JS programs.
+// Receives bytes and returns Result<bytes, error> based on wit/tilt_sdk.wit.
+import { ok } from "./tilt.js";
+
+/** @param {Uint8Array} req
+ * @returns {Result<Uint8Array, Error>}
+ */
+export function execute(req) {
+    return ok(req);
+}
