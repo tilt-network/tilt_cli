@@ -15,21 +15,34 @@ impl List {
         let base_url = utils::url_from_env();
         let url = format!("{base_url}/programs");
         let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
-        let token = utils::load_auth_token()?;
+        let mut token = utils::load_auth_token()?;
         let organization_id = utils::load_selected_organization_id()?;
 
-        let programs = client
+        let mut query_params = vec![("page", "1"), ("page_size", "100")];
+        if !organization_id.is_empty() {
+            query_params.push(("organization_id", &organization_id));
+        }
+
+        let mut response = client
             .get(&url)
-            .query(&[
-                ("page", "1"),
-                ("page_size", "100"),
-                ("organization_id", &organization_id),
-            ])
+            .query(&query_params)
             .bearer_auth(&token)
             .send()
-            .await?
-            .json::<ProgramList>()
             .await?;
+
+        if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+            println!("Token expired, refreshing...");
+            token = utils::refresh_auth_token().await?;
+
+            response = client
+                .get(&url)
+                .query(&query_params)
+                .bearer_auth(&token)
+                .send()
+                .await?;
+        }
+
+        let programs = response.json::<ProgramList>().await?;
 
         let Some(data) = programs.data else {
             println!("No programs found.");

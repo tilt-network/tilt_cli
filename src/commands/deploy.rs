@@ -19,27 +19,57 @@ impl Deploy {
         let url = format!("{base_url}/programs");
 
         let filename = release_path()?;
-        let file_bytes = fs::read(Path::new(&filename))?;
+        let file_bytes = fs::read(Path::new(&filename))
+            .with_context(|| format!("Failed to read compiled WASM file at {}", filename))?;
 
-        let part = multipart::Part::bytes(file_bytes)
-            .file_name("program")
-            .mime_str("application/wasm")?;
         let (name, description) = get_package_metadata()?;
         let organization_id = utils::load_selected_organization_id()?;
-        let token = utils::load_auth_token()?;
+        let mut token = utils::load_auth_token()?;
 
-        let form = multipart::Form::new()
-            .text("name", name)
-            .text("description", description)
-            .text("organization_id", organization_id)
+        let part = multipart::Part::bytes(file_bytes.clone())
+            .file_name("program")
+            .mime_str("application/wasm")?;
+
+        let mut form = multipart::Form::new()
+            .text("name", name.clone())
+            .text("description", description.clone())
             .part("program", part);
 
-        let response = client
+        if !organization_id.is_empty() {
+            form = form.text("organization_id", organization_id.clone());
+        }
+
+        let mut response = client
             .post(&url)
             .bearer_auth(&token)
             .multipart(form)
             .send()
             .await?;
+
+        if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+            println!("Token expired, refreshing...");
+            token = utils::refresh_auth_token().await?;
+
+            let part = multipart::Part::bytes(file_bytes)
+                .file_name("program")
+                .mime_str("application/wasm")?;
+
+            let mut form = multipart::Form::new()
+                .text("name", name)
+                .text("description", description)
+                .part("program", part);
+
+            if !organization_id.is_empty() {
+                form = form.text("organization_id", organization_id);
+            }
+
+            response = client
+                .post(&url)
+                .bearer_auth(&token)
+                .multipart(form)
+                .send()
+                .await?;
+        }
 
         let status = response.status();
         if status.is_success() {
