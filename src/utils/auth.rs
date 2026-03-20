@@ -67,16 +67,14 @@ pub async fn refresh_auth_token() -> Result<String> {
         }
     };
 
-    let mut payload = HashMap::new();
-    payload.insert("grant_type", "refresh_token");
-    payload.insert("refresh_token", &refresh_token);
-    payload.insert("client_id", "tilt-cli");
-    payload.insert("client_secret", "");
+    let payload = serde_json::json!({
+        "refresh_token": refresh_token,
+    });
 
     let client = Client::builder().timeout(Duration::from_secs(15)).build()?;
     let res = client
-        .post(format!("{}/oauth/token", url_from_env()))
-        .form(&payload)
+        .post(format!("{}/auth/refresh", url_from_env()))
+        .json(&payload)
         .send()
         .await?;
 

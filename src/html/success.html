@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Tilt CLI - Login Successful</title>
+        <style>
+            body {
+                background-color: #070414;
+                color: white;
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-image: radial-gradient(
+                    circle at 50% 50%,
+                    #150a30 0%,
+                    #070414 100%
+                );
+            }
+            .container {
+                background-color: rgba(15, 10, 30, 0.8);
+                padding: 3rem;
+                border-radius: 8px;
+                text-align: center;
+                max-width: 400px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                border: 1px solid #2a1f4a;
+            }
+            h1 {
+                font-size: 2rem;
+                margin-bottom: 1rem;
+                background: linear-gradient(to right, #4facfe, #8c52ff);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: #8c52ff; /* Fallback */
+                text-transform: uppercase;
+                letter-spacing: 2px;
+            }
+            p {
+                font-size: 1.1rem;
+                line-height: 1.5;
+                color: #a0a0b0;
+                margin-bottom: 2rem;
+            }
+            .icon {
+                font-size: 4rem;
+                color: #00e676;
+                margin-bottom: 1rem;
+            }
+            .close-btn {
+                background: linear-gradient(to right, #00d2ff, #3a7bd5);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 4px;
+                font-size: 1rem;
+                font-weight: bold;
+                cursor: pointer;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                transition: opacity 0.2s;
+            }
+            .close-btn:hover {
+                opacity: 0.9;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="icon">✓</div>
+            <h1>Success!</h1>
+            <p>
+                You have successfully authenticated with Tilt CLI. You can now
+                close this window and return to your terminal.
+            </p>
+            <button class="close-btn" onclick="window.close()">
+                Close Window
+            </button>
+        </div>
+    </body>
+</html>

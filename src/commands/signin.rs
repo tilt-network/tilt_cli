@@ -1,7 +1,7 @@
 use crate::utils;
 use crate::utils::tilt_dir;
 use anyhow::{Context, Result, anyhow, bail};
-use axum::{Router, extract::Query, routing::get};
+use axum::{Router, extract::Query, response::Html, routing::get};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use clap::Args;
 use rand::{Rng, distributions::Alphanumeric};
@@ -74,10 +74,16 @@ impl Signin {
                 move |Query(params): Query<CallbackParams>| {
                     let tx = tx.clone();
                     async move {
+                        let is_error = params.error.is_some();
                         if let Some(sender) = tx.lock().await.take() {
                             let _ = sender.send(params);
                         }
-                        "Login concluído. Pode fechar esta aba."
+
+                        if is_error {
+                            Html(include_str!("../html/error.html"))
+                        } else {
+                            Html(include_str!("../html/success.html"))
+                        }
                     }
                 }
             }),
