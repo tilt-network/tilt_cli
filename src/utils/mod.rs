@@ -7,6 +7,8 @@ use std::{env, path::PathBuf};
 
 pub use auth::*;
 pub use organization::*;
+pub use project::*;
+
 
 /// Returns the base URL to be used for API requests.
 pub fn url_from_env() -> &'static str {
