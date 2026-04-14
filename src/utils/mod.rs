@@ -1,5 +1,6 @@
 mod auth;
 mod organization;
+mod project;
 
 use anyhow::{Result, anyhow};
 use std::{env, path::PathBuf};
