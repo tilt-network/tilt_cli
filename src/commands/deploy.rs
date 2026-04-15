@@ -1,11 +1,11 @@
+use crate::utils::go_package_metadata;
+use crate::utils::{self, ProjectKind};
 use crate::{commands::build::Build, utils::detect_project_kind};
-use crate::utils::{self, ProjectKind, go_package_metadata};
 use anyhow::{Context, Ok, Result, anyhow};
 use clap::Args;
 use reqwest::{Client, multipart};
 use std::{env, fs, path::Path, time::Duration};
 use toml::Value;
-
 #[derive(Debug, Args)]
 pub struct Deploy {}
 
@@ -60,7 +60,7 @@ impl Deploy {
 fn release_path() -> Result<String> {
     match detect_project_kind()? {
         ProjectKind::Rust => {
-            let (name, _) = get_rust_metadata()?;
+            let (name, _) = rust_package_metadata()?;
             Ok(format!(
                 "./target/wasm32-wasip2/release/{}.wasm",
                 name.replace("-", "_")
@@ -73,9 +73,8 @@ fn release_path() -> Result<String> {
                 Ok("tilt.wasm".to_string())
             }
         }
-        }
     }
-
+}
 
 fn get_rust_metadata() -> Result<(String, String)> {
     let cargo_toml_path = env::current_dir()
