@@ -25,7 +25,7 @@ pub fn go_package_metadata() -> Result<(String, String)> {
         .find_map(|line| line.trim().strip_prefix("module ").map(str::trim).map(str::to_string))
         .ok_or_else(|| anyhow!("Module directive not found in go.mod"))?;
 
-    let name = module_path.split('/').last().unwrap_or(&module_path).to_string();
+    let name = module_path.split('/').next_back().unwrap_or(&module_path).to_string();
 
     Ok((name, module_path))
 }
