@@ -5,7 +5,7 @@ use clap::Args;
 use reqwest::{Client, multipart};
 use std::{env, fs, path::Path, time::Duration};
 use toml::Value;
-
+use crate::utils::go_package_metadata;
 #[derive(Debug, Args)]
 pub struct Deploy {}
 
@@ -53,12 +53,6 @@ impl Deploy {
 }
 
 fn release_path() -> Result<String> {
-    // let (name, _) = get_package_metadata()?;
-    // Ok(format!(
-    //     "./target/wasm32-wasip2/release/{}.wasm",
-    //     name.replace("-", "_")
-    // ))
-
     match detect_project_kind()? {
         ProjectKind::Rust => {
             let (name, _) = get_package_metadata()?;
@@ -78,7 +72,7 @@ fn release_path() -> Result<String> {
     }
 
 
-fn get_package_metadata() -> Result<(String, String)> {
+fn get_rust_metadata() -> Result<(String, String)> {
     let cargo_toml_path = env::current_dir()
         .context("error getting current directory")?
         .join("Cargo.toml");
