@@ -1,11 +1,11 @@
-use crate::utils::go_package_metadata;
+use crate::utils::{go_package_metadata, rust_package_metadata};
 use crate::utils::{self, ProjectKind};
 use crate::{commands::build::Build, utils::detect_project_kind};
-use anyhow::{Context, Ok, Result, anyhow};
+use anyhow::{Ok, Result,};
 use clap::Args;
 use reqwest::{Client, multipart};
-use std::{env, fs, path::Path, time::Duration};
-use toml::Value;
+use std::{ fs, path::Path, time::Duration};
+// use toml::Value;
 #[derive(Debug, Args)]
 pub struct Deploy {}
 
@@ -25,11 +25,10 @@ impl Deploy {
             .file_name("program")
             .mime_str("application/wasm")?;
         let (name, description) = match detect_project_kind()? {
-            ProjectKind::Rust => rust_package_metadata()
-            ProjectKind::Go => go_package_metadata()
+            ProjectKind::Rust => rust_package_metadata()?,
+            ProjectKind::Go => go_package_metadata()?,
 
-
-        }
+        };
         let organization_id = utils::load_selected_organization_id()?;
         let token = utils::load_auth_token()?;
 
@@ -76,29 +75,29 @@ fn release_path() -> Result<String> {
     }
 }
 
-fn get_rust_metadata() -> Result<(String, String)> {
-    let cargo_toml_path = env::current_dir()
-        .context("error getting current directory")?
-        .join("Cargo.toml");
-    let cargo_toml_content = fs::read_to_string(cargo_toml_path)?;
-    let parsed: Value = cargo_toml_content.parse::<Value>()?;
+// fn get_rust_metadata() -> Result<(String, String)> {
+//     let cargo_toml_path = env::current_dir()
+//         .context("error getting current directory")?
+//         .join("Cargo.toml");
+//     let cargo_toml_content = fs::read_to_string(cargo_toml_path)?;
+//     let parsed: Value = cargo_toml_content.parse::<Value>()?;
 
-    let package = parsed
-        .get("package")
-        .and_then(|v| v.as_table())
-        .ok_or_else(|| anyhow!("Missing [package] section"))?;
+//     let package = parsed
+//         .get("package")
+//         .and_then(|v| v.as_table())
+//         .ok_or_else(|| anyhow!("Missing [package] section"))?;
 
-    let name = package
-        .get("name")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow!("Missing 'name' in [package]"))?
-        .to_string();
+//     let name = package
+//         .get("name")
+//         .and_then(|v| v.as_str())
+//         .ok_or_else(|| anyhow!("Missing 'name' in [package]"))?
+//         .to_string();
 
-    let description = package
-        .get("description")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string();
+//     let description = package
+//         .get("description")
+//         .and_then(|v| v.as_str())
+//         .unwrap_or("")
+//         .to_string();
 
-    Ok((name, description))
-}
+//     Ok((name, description))
+// }
