@@ -1,11 +1,11 @@
 use crate::{commands::build::Build, utils::detect_project_kind};
-use crate::utils::{self, ProjectKind};
+use crate::utils::{self, ProjectKind, go_package_metadata};
 use anyhow::{Context, Ok, Result, anyhow};
 use clap::Args;
 use reqwest::{Client, multipart};
 use std::{env, fs, path::Path, time::Duration};
 use toml::Value;
-use crate::utils::go_package_metadata;
+
 #[derive(Debug, Args)]
 pub struct Deploy {}
 
@@ -24,7 +24,12 @@ impl Deploy {
         let part = multipart::Part::bytes(file_bytes)
             .file_name("program")
             .mime_str("application/wasm")?;
-        let (name, description) = get_package_metadata()?;
+        let (name, description) = match detect_project_kind()? {
+            ProjectKind::Rust => rust_package_metadata()
+            ProjectKind::Go => go_package_metadata()
+
+
+        }
         let organization_id = utils::load_selected_organization_id()?;
         let token = utils::load_auth_token()?;
 
@@ -55,7 +60,7 @@ impl Deploy {
 fn release_path() -> Result<String> {
     match detect_project_kind()? {
         ProjectKind::Rust => {
-            let (name, _) = get_package_metadata()?;
+            let (name, _) = get_rust_metadata()?;
             Ok(format!(
                 "./target/wasm32-wasip2/release/{}.wasm",
                 name.replace("-", "_")
