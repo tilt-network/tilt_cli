@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use clap::Args;
-use std::{env::args, process::Command};
+use std::process::Command;
 
 use crate::utils::{ProjectKind, detect_project_kind};
 
@@ -32,24 +32,25 @@ impl Build {
     }
 
     fn build_go(&self) -> Result<()> {
-        .args(["build", "-o", "tilt.wasm", "."])
+        let status = Command::new("go")
+            .args(["build", "-o", "tilt.wasm", "."])
             .env("GOOS", "wasip1")
             .env("GOARCH", "wasm")
             .status()
-            .context("Failed to perfom build. Do you have Go installed?")?;
-        
+            .context("Failed to perform build. Do you have Go installed?")?;
+
         if !status.success() {
-            anyhow::bail!("Go build failed");  
+            anyhow::bail!("Go build failed");
         }
-        
+
         match Command::new("wasm-tools")
             .args(["component", "new", "tilt.wasm", "-o", "tilt:app@0.1.0.wasm"])
             .status()
         {
             Ok(s) if s.success() => println!("Component wrapped: tilt:app@0.1.0.wasm"),
-            Ok(_) => anyhow::bail!("Failed to wrap component"),
-            Err(_) => anyhow::bail!("Failed to run wasm-tools"),
+            _ => println!("wasm-tools not found or failed — skipping component wrap"),
         }
+
         Ok(())
     }
 }
