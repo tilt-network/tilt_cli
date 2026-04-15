@@ -18,6 +18,7 @@ pub fn detect_project_kind() -> Result<ProjectKind> {
     }
 }
 
+#[allow(dead_code)]
 pub fn go_package_metadata() -> Result<(String, String)> {
     let go_mod = fs::read_to_string("go.mod")?;
     let module_path = go_mod

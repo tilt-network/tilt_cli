@@ -1,6 +1,6 @@
-use crate::commands::build::Build;
-use crate::utils;
-use anyhow::{Context, Result, anyhow};
+use crate::{commands::build::Build, utils::detect_project_kind};
+use crate::utils::{self, ProjectKind};
+use anyhow::{Context, Ok, Result, anyhow};
 use clap::Args;
 use reqwest::{Client, multipart};
 use std::{env, fs, path::Path, time::Duration};
@@ -53,12 +53,30 @@ impl Deploy {
 }
 
 fn release_path() -> Result<String> {
-    let (name, _) = get_package_metadata()?;
-    Ok(format!(
-        "./target/wasm32-wasip2/release/{}.wasm",
-        name.replace("-", "_")
-    ))
-}
+    // let (name, _) = get_package_metadata()?;
+    // Ok(format!(
+    //     "./target/wasm32-wasip2/release/{}.wasm",
+    //     name.replace("-", "_")
+    // ))
+
+    match detect_project_kind()? {
+        ProjectKind::Rust => {
+            let (name, _) = get_package_metadata()?;
+            Ok(format!(
+                "./target/wasm32-wasip2/release/{}.wasm",
+                name.replace("-", "_")
+            ))
+        }
+        ProjectKind::Go => {
+            if Path::new("tilt:app@0.1.0.wasm").exists() {
+                Ok("tilt:app@0.1.0.wasm".to_string())
+            } else {
+                Ok("tilt.wasm".to_string())
+            }
+        }
+        }
+    }
+
 
 fn get_package_metadata() -> Result<(String, String)> {
     let cargo_toml_path = env::current_dir()
