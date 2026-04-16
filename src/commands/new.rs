@@ -103,7 +103,7 @@ impl New {
                 "--world",
                 "tilt",
                 "--out",
-                "internal/tilt/app",
+                "internal",
                 "wit/component.wit",
             ])
             .current_dir(name)
