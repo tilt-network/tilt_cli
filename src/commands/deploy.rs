@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-use crate::utils::{self, ProjectKind};
-use crate::utils::{go_package_metadata, rust_package_metadata};
-use crate::{commands::build::Build, utils::detect_project_kind};
-use anyhow::{Ok, Result,};
-use clap::Args;
-use reqwest::{Client, multipart};
-use std::{ fs, path::Path, time::Duration};
-// use toml::Value;
-=======
 use crate::commands::build::Build;
 use crate::utils::{self, ProjectKind, detect_project_kind, go_package_metadata, rust_package_metadata};
 use anyhow::Result;
@@ -15,7 +5,6 @@ use clap::Args;
 use reqwest::{Client, multipart};
 use std::{fs, path::Path, time::Duration};
 
->>>>>>> 7e9b901 (feat: new command for go)
 #[derive(Debug, Args)]
 pub struct Deploy {}
 
@@ -36,18 +25,12 @@ impl Deploy {
 
         let (name, description) = match detect_project_kind()? {
             ProjectKind::Rust => rust_package_metadata()?,
-<<<<<<< HEAD
-            ProjectKind::Go => go_package_metadata()?,
-
-        };
-=======
             ProjectKind::Go => {
                 let (name, _) = go_package_metadata()?;
                 (name, String::new())
             }
         };
 
->>>>>>> 7e9b901 (feat: new command for go)
         let organization_id = utils::load_selected_organization_id()?;
         let token = utils::load_auth_token()?;
 
@@ -93,33 +76,3 @@ fn release_path() -> Result<String> {
         }
     }
 }
-<<<<<<< HEAD
-
-// fn get_rust_metadata() -> Result<(String, String)> {
-//     let cargo_toml_path = env::current_dir()
-//         .context("error getting current directory")?
-//         .join("Cargo.toml");
-//     let cargo_toml_content = fs::read_to_string(cargo_toml_path)?;
-//     let parsed: Value = cargo_toml_content.parse::<Value>()?;
-
-//     let package = parsed
-//         .get("package")
-//         .and_then(|v| v.as_table())
-//         .ok_or_else(|| anyhow!("Missing [package] section"))?;
-
-//     let name = package
-//         .get("name")
-//         .and_then(|v| v.as_str())
-//         .ok_or_else(|| anyhow!("Missing 'name' in [package]"))?
-//         .to_string();
-
-//     let description = package
-//         .get("description")
-//         .and_then(|v| v.as_str())
-//         .unwrap_or("")
-//         .to_string();
-
-//     Ok((name, description))
-// }
-=======
->>>>>>> 7e9b901 (feat: new command for go)
