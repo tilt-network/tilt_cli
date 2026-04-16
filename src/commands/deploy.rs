@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 use crate::utils::{self, ProjectKind};
 use crate::utils::{go_package_metadata, rust_package_metadata};
 use crate::{commands::build::Build, utils::detect_project_kind};
@@ -6,12 +7,20 @@ use clap::Args;
 use reqwest::{Client, multipart};
 use std::{ fs, path::Path, time::Duration};
 // use toml::Value;
+=======
+use crate::commands::build::Build;
+use crate::utils::{self, ProjectKind, detect_project_kind, go_package_metadata, rust_package_metadata};
+use anyhow::Result;
+use clap::Args;
+use reqwest::{Client, multipart};
+use std::{fs, path::Path, time::Duration};
+
+>>>>>>> 7e9b901 (feat: new command for go)
 #[derive(Debug, Args)]
 pub struct Deploy {}
 
 impl Deploy {
     pub async fn run(&self) -> Result<()> {
-        // ensure the program is built before deploying.
         Build {}.run().await?;
 
         let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
@@ -24,11 +33,21 @@ impl Deploy {
         let part = multipart::Part::bytes(file_bytes)
             .file_name("program")
             .mime_str("application/wasm")?;
+
         let (name, description) = match detect_project_kind()? {
             ProjectKind::Rust => rust_package_metadata()?,
+<<<<<<< HEAD
             ProjectKind::Go => go_package_metadata()?,
 
         };
+=======
+            ProjectKind::Go => {
+                let (name, _) = go_package_metadata()?;
+                (name, String::new())
+            }
+        };
+
+>>>>>>> 7e9b901 (feat: new command for go)
         let organization_id = utils::load_selected_organization_id()?;
         let token = utils::load_auth_token()?;
 
@@ -49,7 +68,7 @@ impl Deploy {
         if status.is_success() {
             println!("Program deployed successfully");
         } else {
-            println!("Failed to deploy program: {}", status);
+            println!("Failed to deploy program: {status}");
         }
 
         Ok(())
@@ -62,7 +81,7 @@ fn release_path() -> Result<String> {
             let (name, _) = rust_package_metadata()?;
             Ok(format!(
                 "./target/wasm32-wasip2/release/{}.wasm",
-                name.replace("-", "_")
+                name.replace('-', "_")
             ))
         }
         ProjectKind::Go => {
@@ -74,6 +93,7 @@ fn release_path() -> Result<String> {
         }
     }
 }
+<<<<<<< HEAD
 
 // fn get_rust_metadata() -> Result<(String, String)> {
 //     let cargo_toml_path = env::current_dir()
@@ -101,3 +121,5 @@ fn release_path() -> Result<String> {
 
 //     Ok((name, description))
 // }
+=======
+>>>>>>> 7e9b901 (feat: new command for go)

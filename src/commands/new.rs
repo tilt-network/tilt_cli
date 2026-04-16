@@ -6,21 +6,31 @@ pub const CUSTOM_LIB: &str = include_str!("../../static/lib.rs.template");
 pub const TILT_BINDINGS: &str = include_str!("../../static/tilt.rs.template");
 pub const CUSTOM_TOML: &str = include_str!("../../static/Cargo.toml.template");
 pub const WIT_FILE: &str = include_str!("../../static/tilt_sdk.wit.template");
+pub const GO_MOD: &str = include_str!("../../static/go.mod.template");
+pub const GO_MAIN: &str = include_str!("../../static/main.go.template");
 
 #[derive(Debug, Args)]
 pub struct New {
     #[arg(short = 'n', long)]
     name: String,
+    #[arg(long, default_value = "rust", value_parser = ["rust", "go"])]
+    template: String,
 }
 
 impl New {
     pub async fn run(&self) -> Result<()> {
         let name = &self.name;
+        match self.template.as_str() {
+            "go" => self.new_go(name),
+            _ => self.new_rust(name),
+        }
+    }
 
+    fn new_rust(&self, name: &str) -> Result<()> {
         let output = Command::new("cargo")
             .args(["new", "--lib", name])
             .output()
-            .context("Failed to create a new program. Do you have rust installed?")?;
+            .context("Failed to create a new program. Do you have Rust installed?")?;
 
         if !output.status.success() {
             match output.status.code() {
@@ -58,6 +68,52 @@ impl New {
 
         Ok(())
     }
+
+    fn new_go(&self, name: &str) -> Result<()> {
+        let go_mod = GO_MOD.replace("{module_name}", name);
+        let go_main = GO_MAIN.replace("{module_name}", name);
+
+        fs::create_dir_all(format!("{name}/wit")).context("Failed to create wit directory")?;
+        fs::write(format!("{name}/go.mod"), go_mod).context("Failed to write go.mod")?;
+        fs::write(format!("{name}/main.go"), go_main).context("Failed to write main.go")?;
+        fs::write(format!("{name}/wit/component.wit"), WIT_FILE)
+            .context("Failed to write component.wit")?;
+
+        let tidy = Command::new("go")
+            .args(["mod", "tidy"])
+            .current_dir(name)
+            .status()
+            .context("Failed to run go mod tidy. Do you have Go installed?")?;
+
+        if !tidy.success() {
+            anyhow::bail!("go mod tidy failed");
+        }
+
+        let bindgen = Command::new("go")
+            .args([
+                "tool",
+                "wit-bindgen-go",
+                "generate",
+                "--world",
+                "tilt",
+                "--out",
+                "internal/tilt/app",
+                "wit/component.wit",
+            ])
+            .current_dir(name)
+            .status()
+            .context("Failed to run wit-bindgen-go")?;
+
+        if !bindgen.success() {
+            anyhow::bail!("wit-bindgen-go generate failed");
+        }
+
+        println!("Project '{name}' created successfully!");
+        println!("      cd ./{name}");
+        println!("      tilt test");
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -71,7 +127,10 @@ mod test {
         let name = temp_dir.path().join("my_project");
         let name_str = name.to_str().unwrap().to_string();
 
-        let cmd = New { name: name_str };
+        let cmd = New {
+            name: name_str,
+            template: "rust".to_string(),
+        };
         cmd.run().await.unwrap();
 
         assert!(name.join("src/lib.rs").exists());
@@ -85,6 +144,7 @@ mod test {
 
         let cmd = New {
             name: name_str.clone(),
+            template: "rust".to_string(),
         };
         cmd.run().await.unwrap();
 
