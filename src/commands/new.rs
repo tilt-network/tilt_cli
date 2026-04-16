@@ -114,12 +114,49 @@ impl New {
             anyhow::bail!("wit-bindgen-go generate failed");
         }
 
+        patch_wasmexport_compat(name)?;
+
         println!("Project '{name}' created successfully!");
         println!("      cd ./{name}");
         println!("      tilt test");
 
         Ok(())
     }
+}
+
+// go:wasmexport in Go 1.24+ only allows unsafe.Pointer as a pointer return type.
+// wit-bindgen-go generates *cm.Result[...] which the compiler rejects.
+// Both are i32 in WASM linear memory, so the patch is ABI-compatible.
+fn patch_wasmexport_compat(name: &str) -> Result<()> {
+    let path = format!("{name}/internal/tilt/app/tilt/tilt.wasm.go");
+    let content = fs::read_to_string(&path)
+        .context("Failed to read generated tilt.wasm.go")?;
+
+    let patched = content
+        .replace(
+            "\t\"go.bytecodealliance.org/cm\"\n)",
+            "\t\"go.bytecodealliance.org/cm\"\n\t\"unsafe\"\n)",
+        )
+        .replace(
+            "\tresult = &result_\n\treturn\n}",
+            "\treturn unsafe.Pointer(&result_)\n}",
+        );
+
+    // Replace the return type: `) (result *cm.Result[...]) {` → `) unsafe.Pointer {`
+    let patched = if let Some(start) = patched.find(") (result *cm.Result[") {
+        if let Some(end) = patched[start..].find("]) {") {
+            let before = &patched[..start];
+            let after = &patched[start + end + 3..];
+            format!("{before}) unsafe.Pointer {{{after}")
+        } else {
+            patched
+        }
+    } else {
+        patched
+    };
+
+    fs::write(&path, patched).context("Failed to write patched tilt.wasm.go")?;
+    Ok(())
 }
 
 #[cfg(test)]
