@@ -1,5 +1,5 @@
-use crate::utils::{go_package_metadata, rust_package_metadata};
 use crate::utils::{self, ProjectKind};
+use crate::utils::{go_package_metadata, rust_package_metadata};
 use crate::{commands::build::Build, utils::detect_project_kind};
 use anyhow::{Ok, Result,};
 use clap::Args;
