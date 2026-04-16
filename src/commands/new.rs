@@ -146,7 +146,7 @@ fn patch_wasmexport_compat(name: &str) -> Result<()> {
     let patched = if let Some(start) = patched.find(") (result *cm.Result[") {
         if let Some(end) = patched[start..].find("]) {") {
             let before = &patched[..start];
-            let after = &patched[start + end + 3..];
+            let after = &patched[start + end + 4..];
             format!("{before}) unsafe.Pointer {{{after}")
         } else {
             patched
