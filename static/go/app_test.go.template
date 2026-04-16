@@ -1,0 +1,11 @@
+package app
+
+import "testing"
+
+func TestProcess(t *testing.T) {
+	got := Process([]byte("hello"))
+	want := "processed: hello"
+	if string(got) != want {
+		t.Errorf("got %q, want %q", string(got), want)
+	}
+}

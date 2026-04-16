@@ -2,12 +2,14 @@ use anyhow::{Context, Result};
 use clap::Args;
 use std::{fs, process::Command};
 
-pub const CUSTOM_LIB: &str = include_str!("../../static/lib.rs.template");
-pub const TILT_BINDINGS: &str = include_str!("../../static/tilt.rs.template");
-pub const CUSTOM_TOML: &str = include_str!("../../static/Cargo.toml.template");
+pub const CUSTOM_LIB: &str = include_str!("../../static/rust/lib.rs.template");
+pub const TILT_BINDINGS: &str = include_str!("../../static/rust/tilt.rs.template");
+pub const CUSTOM_TOML: &str = include_str!("../../static/rust/Cargo.toml.template");
 pub const WIT_FILE: &str = include_str!("../../static/tilt_sdk.wit.template");
-pub const GO_MOD: &str = include_str!("../../static/go.mod.template");
-pub const GO_MAIN: &str = include_str!("../../static/main.go.template");
+pub const GO_MOD: &str = include_str!("../../static/go/go.mod.template");
+pub const GO_MAIN: &str = include_str!("../../static/go/main.go.template");
+pub const GO_APP: &str = include_str!("../../static/go/app.go.template");
+pub const GO_APP_TEST: &str = include_str!("../../static/go/app_test.go.template");
 
 #[derive(Debug, Args)]
 pub struct New {
@@ -74,8 +76,12 @@ impl New {
         let go_main = GO_MAIN.replace("{module_name}", name);
 
         fs::create_dir_all(format!("{name}/wit")).context("Failed to create wit directory")?;
+        fs::create_dir_all(format!("{name}/app")).context("Failed to create app directory")?;
         fs::write(format!("{name}/go.mod"), go_mod).context("Failed to write go.mod")?;
         fs::write(format!("{name}/main.go"), go_main).context("Failed to write main.go")?;
+        fs::write(format!("{name}/app/app.go"), GO_APP).context("Failed to write app/app.go")?;
+        fs::write(format!("{name}/app/app_test.go"), GO_APP_TEST)
+            .context("Failed to write app/app_test.go")?;
         fs::write(format!("{name}/wit/component.wit"), WIT_FILE)
             .context("Failed to write component.wit")?;
 
