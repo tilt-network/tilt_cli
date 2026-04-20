@@ -10,12 +10,10 @@ pub enum ProjectKind {
 
 pub fn detect_project_kind() -> Result<ProjectKind> {
     let dir = env::current_dir()?;
-    if dir.join("Cargo.toml").exists() {
-        Ok(ProjectKind::Rust)
-    } else if dir.join("go.mod").exists() {
-        Ok(ProjectKind::Go)
-    } else {
-        Err(anyhow!("No supported project kind found"))
+    match (dir.join("Cargo.toml").exists(), dir.join("go.mod").exists()) {
+        (true, _) => Ok(ProjectKind::Rust),
+        (false, true) => Ok(ProjectKind::Go),
+        (false, false) => Err(anyhow!("No supported project kind found")),
     }
 }
 

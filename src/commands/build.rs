@@ -1,8 +1,19 @@
 use anyhow::{Context, Result};
 use clap::Args;
-use std::{fs, process::Command};
+use std::{fs, path::Path, process::Command};
 
 use crate::utils::{ProjectKind, detect_project_kind};
+
+fn tinygo_path() -> String {
+    let home = dirs::home_dir().unwrap_or_default();
+    [
+        home.join("tinygo/bin/tinygo").to_string_lossy().into_owned(),
+        "/usr/local/tinygo/bin/tinygo".to_string(),
+    ]
+    .into_iter()
+    .find(|p| Path::new(p).exists())
+    .unwrap_or_else(|| "tinygo".to_string())
+}
 
 const WASI_REACTOR_ADAPTER: &[u8] =
     include_bytes!("../../static/go/wasi_preview1_reactor.wasm");
@@ -35,15 +46,14 @@ impl Build {
     }
 
     fn build_go(&self) -> Result<()> {
-        let status = Command::new("go")
-            .args(["build", "-o", "tilt.wasm", "."])
-            .env("GOOS", "wasip1")
-            .env("GOARCH", "wasm")
+        let tinygo = tinygo_path();
+        let status = Command::new(&tinygo)
+            .args(["build", "-o", "tilt.wasm", "-target=wasip1", "."])
             .status()
-            .context("Failed to perform build. Do you have Go installed?")?;
+            .context("Failed to build. Is TinyGo installed? https://tinygo.org/getting-started/install/")?;
 
         if !status.success() {
-            anyhow::bail!("Go build failed");
+            anyhow::bail!("TinyGo build failed");
         }
 
         let adapter_path = std::env::temp_dir().join("wasi_preview1_reactor.wasm");
@@ -52,11 +62,28 @@ impl Build {
 
         let adapt_arg = format!("wasi_snapshot_preview1={}", adapter_path.display());
 
+        let embed_ok = Command::new("wasm-tools")
+            .args([
+                "component",
+                "embed",
+                "--world",
+                "tilt",
+                "wit/",
+                "tilt.wasm",
+                "-o",
+                "tilt-embedded.wasm",
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+
+        let input = if embed_ok { "tilt-embedded.wasm" } else { "tilt.wasm" };
+
         match Command::new("wasm-tools")
             .args([
                 "component",
                 "new",
-                "tilt.wasm",
+                input,
                 "--adapt",
                 &adapt_arg,
                 "-o",

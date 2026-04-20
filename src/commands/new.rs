@@ -10,6 +10,9 @@ pub const GO_MOD: &str = include_str!("../../static/go/go.mod.template");
 pub const GO_MAIN: &str = include_str!("../../static/go/main.go.template");
 pub const GO_APP: &str = include_str!("../../static/go/app.go.template");
 pub const GO_APP_TEST: &str = include_str!("../../static/go/app_test.go.template");
+pub const GO_CABI: &str = include_str!("../../static/go/cabi.go.template");
+pub const GO_WIT: &str = include_str!("../../static/go/component.wit.template");
+pub const GO_WKG_LOCK: &str = include_str!("../../static/go/wkg.lock.template");
 
 #[derive(Debug, Args)]
 pub struct New {
@@ -82,8 +85,11 @@ impl New {
         fs::write(format!("{name}/app/app.go"), GO_APP).context("Failed to write app/app.go")?;
         fs::write(format!("{name}/app/app_test.go"), GO_APP_TEST)
             .context("Failed to write app/app_test.go")?;
-        fs::write(format!("{name}/wit/component.wit"), WIT_FILE)
+        fs::write(format!("{name}/cabi.go"), GO_CABI).context("Failed to write cabi.go")?;
+        fs::write(format!("{name}/wit/component.wit"), GO_WIT)
             .context("Failed to write component.wit")?;
+        fs::write(format!("{name}/wkg.lock"), GO_WKG_LOCK)
+            .context("Failed to write wkg.lock")?;
 
         let tidy = Command::new("go")
             .args(["mod", "tidy"])
@@ -95,6 +101,16 @@ impl New {
             anyhow::bail!("go mod tidy failed");
         }
 
+        let fetch = Command::new("wkg")
+            .args(["wit", "fetch"])
+            .current_dir(name)
+            .status()
+            .context("Failed to run wkg wit fetch. Do you have wkg installed? Run: cargo install wkg")?;
+
+        if !fetch.success() {
+            anyhow::bail!("wkg wit fetch failed");
+        }
+
         let bindgen = Command::new("go")
             .args([
                 "tool",
@@ -104,7 +120,7 @@ impl New {
                 "tilt",
                 "--out",
                 "internal",
-                "wit/component.wit",
+                "wit/",
             ])
             .current_dir(name)
             .status()
@@ -140,9 +156,12 @@ fn patch_wasmexport_compat(name: &str) -> Result<()> {
         .replace(
             "\tresult = &result_\n\treturn\n}",
             "\treturn unsafe.Pointer(&result_)\n}",
+        )
+        .replace(
+            "//go:wasmexport execute\n",
+            "//export execute\n",
         );
 
-    // Replace the return type: `) (result *cm.Result[...]) {` → `) unsafe.Pointer {`
     let patched = if let Some(start) = patched.find(") (result *cm.Result[") {
         if let Some(end) = patched[start..].find("]) {") {
             let before = &patched[..start];
