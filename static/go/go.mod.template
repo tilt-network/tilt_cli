@@ -1,0 +1,9 @@
+module {module_name}
+
+go 1.25
+
+tool go.bytecodealliance.org/cmd/wit-bindgen-go
+
+require (
+	go.bytecodealliance.org/cm v0.3.0
+)

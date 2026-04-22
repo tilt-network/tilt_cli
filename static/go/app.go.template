@@ -1,0 +1,5 @@
+package app
+
+func Process(input []byte) []byte {
+	return append([]byte("processed: "), input...)
+}

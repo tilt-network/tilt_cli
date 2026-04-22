@@ -1,16 +1,25 @@
 [package]
-name = "tilt"
-version = "0.1.0"
+name = "tilt-cli"
+version = "0.2.0"
 edition = "2024"
+description = "CLI for interacting with the Tilt distributed processing platform"
+license-file = "LICENSE"
+
+
+[[bin]]
+name = "tilt"
+path = "src/main.rs"
+
 
 [dependencies]
-clap = "4.5.35"
+anyhow = "1"
+clap = { version = "4.5.35", features = ["derive"] }
 dirs = "6.0.0"
 reqwest = { version = "0.11.27", features = ["multipart", "json"] }
-rusqlite = "0.34.0"
 serde_json = "1.0.140"
 serde = { version = "1.0", features = ["derive"] }
 tempfile = "3.19.1"
-tokio = { version = "1.44.1", features = ["full"] }
+tokio = { version = "1.44.1", features = ["macros", "rt-multi-thread"] }
 toml = "0.8.20"
-uuid = { version = "1.16.0", features = ["v4"] }
+uuid = { version = "1.16.0", features = ["serde", "v4"] }
+chrono = { version = "0.4.41", features = ["serde"] }

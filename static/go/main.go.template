@@ -1,0 +1,18 @@
+//go:build wasip1
+
+package main
+
+import (
+	"{module_name}/app"
+	"{module_name}/internal/tilt/app/tilt"
+	"go.bytecodealliance.org/cm"
+)
+
+func init() {
+	tilt.Exports.Execute = func(req cm.List[uint8]) cm.Result[tilt.ErrorShape, cm.List[uint8], tilt.Error] {
+		output := app.Process(req.Slice())
+		return cm.OK[cm.Result[tilt.ErrorShape, cm.List[uint8], tilt.Error]](cm.ToList(output))
+	}
+}
+
+func main() {}

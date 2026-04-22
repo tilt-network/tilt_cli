@@ -1,0 +1,33 @@
+//go:build wasip1
+
+package main
+
+import "unsafe"
+
+var cabiMem [256 * 1024]byte
+var cabiOff uintptr
+
+//export cabi_realloc
+func cabiRealloc(ptr unsafe.Pointer, oldSize, align, newSize uint32) unsafe.Pointer {
+	if newSize == 0 {
+		return nil
+	}
+	a := uintptr(align)
+	top := (cabiOff + a - 1) &^ (a - 1)
+	end := top + uintptr(newSize)
+	if end > uintptr(len(cabiMem)) {
+		return nil
+	}
+	p := unsafe.Pointer(&cabiMem[top])
+	if ptr != nil && oldSize > 0 {
+		cpLen := uintptr(oldSize)
+		if cpLen > uintptr(newSize) {
+			cpLen = uintptr(newSize)
+		}
+		for i := uintptr(0); i < cpLen; i++ {
+			*(*byte)(unsafe.Pointer(uintptr(p) + i)) = *(*byte)(unsafe.Pointer(uintptr(ptr) + i))
+		}
+	}
+	cabiOff = end
+	return p
+}
