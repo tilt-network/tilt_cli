@@ -21,7 +21,7 @@ pub const PY_PYPROJECT: &str = include_str!("../../static/python/pyproject.toml.
 pub struct New {
     #[arg(short = 'n', long)]
     name: String,
-    #[arg(long, default_value = "rust", value_parser = ["rust", "go"])]
+    #[arg(long, default_value = "rust", value_parser = ["rust", "go", "python"])]
     template: String,
 }
 
