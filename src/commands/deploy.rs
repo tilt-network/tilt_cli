@@ -1,5 +1,8 @@
 use crate::commands::build::Build;
-use crate::utils::{self, ProjectKind, detect_project_kind, go_package_metadata, rust_package_metadata};
+use crate::utils::{
+    self, ProjectKind, detect_project_kind, go_package_metadata, python_package_metadata,
+    rust_package_metadata,
+};
 use anyhow::Result;
 use clap::Args;
 use reqwest::{Client, multipart};
@@ -12,7 +15,11 @@ impl Deploy {
     pub async fn run(&self) -> Result<()> {
         Build {}.run().await?;
 
-        let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
+        let file_size = fs::metadata(release_path()?)?.len();
+        let timeout_secs = (file_size / (100 * 1024)).max(30); // ~100 KB/s mínimo, mínimo 30s
+        let client = Client::builder()
+            .timeout(Duration::from_secs(timeout_secs))
+            .build()?;
         let base_url = utils::url_from_env();
         let url = format!("{base_url}/programs");
 
@@ -29,6 +36,7 @@ impl Deploy {
                 let (name, _) = go_package_metadata()?;
                 (name, String::new())
             }
+            ProjectKind::Python => python_package_metadata()?,
         };
 
         let organization_id = utils::load_selected_organization_id()?;
@@ -74,5 +82,6 @@ fn release_path() -> Result<String> {
                 Ok("tilt.wasm".to_string())
             }
         }
+        ProjectKind::Python => Ok("tilt.wasm".to_string()),
     }
 }

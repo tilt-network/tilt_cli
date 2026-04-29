@@ -13,12 +13,15 @@ pub const GO_APP_TEST: &str = include_str!("../../static/go/app_test.go.template
 pub const GO_CABI: &str = include_str!("../../static/go/cabi.go.template");
 pub const GO_WIT: &str = include_str!("../../static/go/component.wit.template");
 pub const GO_WKG_LOCK: &str = include_str!("../../static/go/wkg.lock.template");
+pub const PY_APP: &str = include_str!("../../static/python/app.py.template");
+pub const PY_WIT: &str = include_str!("../../static/python/component.wit.template");
+pub const PY_PYPROJECT: &str = include_str!("../../static/python/pyproject.toml.template");
 
 #[derive(Debug, Args)]
 pub struct New {
     #[arg(short = 'n', long)]
     name: String,
-    #[arg(long, default_value = "rust", value_parser = ["rust", "go"])]
+    #[arg(long, default_value = "rust", value_parser = ["rust", "go", "python"])]
     template: String,
 }
 
@@ -27,6 +30,7 @@ impl New {
         let name = &self.name;
         match self.template.as_str() {
             "go" => self.new_go(name),
+            "python" => self.new_python(name),
             _ => self.new_rust(name),
         }
     }
@@ -88,8 +92,7 @@ impl New {
         fs::write(format!("{name}/cabi.go"), GO_CABI).context("Failed to write cabi.go")?;
         fs::write(format!("{name}/wit/component.wit"), GO_WIT)
             .context("Failed to write component.wit")?;
-        fs::write(format!("{name}/wkg.lock"), GO_WKG_LOCK)
-            .context("Failed to write wkg.lock")?;
+        fs::write(format!("{name}/wkg.lock"), GO_WKG_LOCK).context("Failed to write wkg.lock")?;
 
         let tidy = Command::new("go")
             .args(["mod", "tidy"])
@@ -105,7 +108,9 @@ impl New {
             .args(["wit", "fetch"])
             .current_dir(name)
             .status()
-            .context("Failed to run wkg wit fetch. Do you have wkg installed? Run: cargo install wkg")?;
+            .context(
+                "Failed to run wkg wit fetch. Do you have wkg installed? Run: cargo install wkg",
+            )?;
 
         if !fetch.success() {
             anyhow::bail!("wkg wit fetch failed");
@@ -138,6 +143,34 @@ impl New {
 
         Ok(())
     }
+
+    fn new_python(&self, name: &str) -> Result<()> {
+        let pyproject = PY_PYPROJECT.replace("{project_name}", name);
+
+        fs::create_dir_all(format!("{name}/wit")).context("Failed to create wit directory")?;
+
+        fs::write(format!("{name}/app.py"), PY_APP).context("Failed to write app.py")?;
+        fs::write(format!("{name}/wit/component.wit"), PY_WIT)
+            .context("Failed to write component.wit")?;
+        fs::write(format!("{name}/pyproject.toml"), pyproject)
+            .context("Failed to write pyproject.toml")?;
+
+        let bindings = Command::new("componentize-py")
+            .args(["-d", "wit/", "-w", "tilt", "bindings", "."])
+            .current_dir(name)
+            .status()
+            .context("Failed to run componentize-py. Do you have it installed? Run:pip install componentize-py")?;
+
+        if !bindings.success() {
+            anyhow::bail!("componentize-py bindings generation failed");
+        }
+
+        println!("Project {name} created successfully!");
+        println!("      cd./{name}");
+        println!("      tilt build");
+
+        Ok(())
+    }
 }
 
 // go:wasmexport in Go 1.24+ only allows unsafe.Pointer as a pointer return type.
@@ -145,8 +178,7 @@ impl New {
 // Both are i32 in WASM linear memory, so the patch is ABI-compatible.
 fn patch_wasmexport_compat(name: &str) -> Result<()> {
     let path = format!("{name}/internal/tilt/app/tilt/tilt.wasm.go");
-    let content = fs::read_to_string(&path)
-        .context("Failed to read generated tilt.wasm.go")?;
+    let content = fs::read_to_string(&path).context("Failed to read generated tilt.wasm.go")?;
 
     let patched = content
         .replace(
@@ -157,10 +189,7 @@ fn patch_wasmexport_compat(name: &str) -> Result<()> {
             "\tresult = &result_\n\treturn\n}",
             "\treturn unsafe.Pointer(&result_)\n}",
         )
-        .replace(
-            "//go:wasmexport execute\n",
-            "//export execute\n",
-        );
+        .replace("//go:wasmexport execute\n", "//export execute\n");
 
     let patched = if let Some(start) = patched.find(") (result *cm.Result[") {
         if let Some(end) = patched[start..].find("]) {") {

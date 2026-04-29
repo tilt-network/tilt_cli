@@ -6,15 +6,20 @@ use toml::Value;
 pub enum ProjectKind {
     Rust,
     Go,
+    Python,
 }
 
 pub fn detect_project_kind() -> Result<ProjectKind> {
     let dir = env::current_dir()?;
-    match (dir.join("Cargo.toml").exists(), dir.join("go.mod").exists()) {
-        (true, _) => Ok(ProjectKind::Rust),
-        (false, true) => Ok(ProjectKind::Go),
-        (false, false) => Err(anyhow!("No supported project kind found")),
-    }
+    [
+        ("Cargo.toml", ProjectKind::Rust),
+        ("go.mod", ProjectKind::Go),
+        ("pyproject.toml", ProjectKind::Python),
+    ]
+    .into_iter()
+    .find(|(marker, _)| dir.join(marker).exists())
+    .map(|(_, kind)| kind)
+    .ok_or_else(|| anyhow!("No supported project kind found"))
 }
 
 pub fn rust_package_metadata() -> Result<(String, String)> {
@@ -63,4 +68,25 @@ pub fn go_package_metadata() -> Result<(String, String)> {
         .to_string();
 
     Ok((name, module_path))
+}
+
+pub fn python_package_metadata() -> Result<(String, String)> {
+    let content = fs::read_to_string("pyproject.toml").context("Failed to read pyproject.toml")?;
+    let parsed: Value = content.parse::<Value>()?;
+
+    let name = parsed
+        .get("project")
+        .and_then(|v| v.get("name"))
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow!("Missing 'name' in [project]"))?
+        .to_string();
+
+    let description = parsed
+        .get("project")
+        .and_then(|v| v.get("description"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    Ok((name, description))
 }

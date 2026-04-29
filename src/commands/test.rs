@@ -12,6 +12,7 @@ impl Test {
         match detect_project_kind()? {
             ProjectKind::Rust => self.test_rust(),
             ProjectKind::Go => self.test_go(),
+            ProjectKind::Python => self.test_python(),
         }
     }
 
@@ -39,6 +40,20 @@ impl Test {
 
         if !status.success() {
             anyhow::bail!("Go test failed");
+        }
+        Ok(())
+    }
+
+    fn test_python(&self) -> Result<()> {
+        let status = Command::new("python")
+            .args(["-m", "pytest"])
+            .status()
+            .context(
+                "Failed to execute pytest. Do you have it installed? Run: pip install pytest",
+            )?;
+
+        if !status.success() {
+            anyhow::bail!("pytest failed");
         }
         Ok(())
     }

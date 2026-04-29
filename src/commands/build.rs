@@ -7,7 +7,9 @@ use crate::utils::{ProjectKind, detect_project_kind};
 fn tinygo_path() -> String {
     let home = dirs::home_dir().unwrap_or_default();
     [
-        home.join("tinygo/bin/tinygo").to_string_lossy().into_owned(),
+        home.join("tinygo/bin/tinygo")
+            .to_string_lossy()
+            .into_owned(),
         "/usr/local/tinygo/bin/tinygo".to_string(),
     ]
     .into_iter()
@@ -15,8 +17,7 @@ fn tinygo_path() -> String {
     .unwrap_or_else(|| "tinygo".to_string())
 }
 
-const WASI_REACTOR_ADAPTER: &[u8] =
-    include_bytes!("../../static/go/wasi_preview1_reactor.wasm");
+const WASI_REACTOR_ADAPTER: &[u8] = include_bytes!("../../static/go/wasi_preview1_reactor.wasm");
 
 #[derive(Debug, Args)]
 pub struct Build {}
@@ -25,6 +26,7 @@ impl Build {
     pub async fn run(&self) -> Result<()> {
         match detect_project_kind()? {
             ProjectKind::Rust => self.build_rust(),
+            ProjectKind::Python => self.build_python(),
             ProjectKind::Go => self.build_go(),
         }
     }
@@ -50,15 +52,16 @@ impl Build {
         let status = Command::new(&tinygo)
             .args(["build", "-o", "tilt.wasm", "-target=wasip1", "."])
             .status()
-            .context("Failed to build. Is TinyGo installed? https://tinygo.org/getting-started/install/")?;
+            .context(
+                "Failed to build. Is TinyGo installed? https://tinygo.org/getting-started/install/",
+            )?;
 
         if !status.success() {
             anyhow::bail!("TinyGo build failed");
         }
 
         let adapter_path = std::env::temp_dir().join("wasi_preview1_reactor.wasm");
-        fs::write(&adapter_path, WASI_REACTOR_ADAPTER)
-            .context("Failed to write WASI adapter")?;
+        fs::write(&adapter_path, WASI_REACTOR_ADAPTER).context("Failed to write WASI adapter")?;
 
         let adapt_arg = format!("wasi_snapshot_preview1={}", adapter_path.display());
 
@@ -77,7 +80,11 @@ impl Build {
             .map(|s| s.success())
             .unwrap_or(false);
 
-        let input = if embed_ok { "tilt-embedded.wasm" } else { "tilt.wasm" };
+        let input = if embed_ok {
+            "tilt-embedded.wasm"
+        } else {
+            "tilt.wasm"
+        };
 
         match Command::new("wasm-tools")
             .args([
@@ -95,6 +102,31 @@ impl Build {
             _ => println!("wasm-tools not found or failed — skipping component wrap"),
         }
 
+        Ok(())
+    }
+
+    fn build_python(&self) -> Result<()> {
+        let status = Command::new("componentize-py")
+            .args([
+                "-d",
+                "wit/",
+                "-w",
+                "tilt",
+                "componentize",
+                "app",
+                "-o",
+                "tilt.wasm",
+            ])
+            .status()
+            .context(
+                "Failed to build. Is componentize-py installed? Run: pip install componentize-py",
+            )?;
+
+        if !status.success() {
+            anyhow::bail!("componentize-py build failed");
+        }
+
+        println!("Component built: tilt.wasm");
         Ok(())
     }
 }
