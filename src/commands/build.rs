@@ -115,7 +115,7 @@ impl Build {
                 "componentize",
                 "app",
                 "-o",
-                "tilt-wasm",
+                "tilt.wasm",
             ])
             .status()
             .context(
@@ -126,7 +126,7 @@ impl Build {
             anyhow::bail!("componentize-py build failed");
         }
 
-        println!("Component built: tilt-wasm");
+        println!("Component built: tilt.wasm");
         Ok(())
     }
 }
