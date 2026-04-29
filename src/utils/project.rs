@@ -5,18 +5,21 @@ use toml::Value;
 
 pub enum ProjectKind {
     Rust,
-    Python,
     Go,
+    Python,
 }
 
 pub fn detect_project_kind() -> Result<ProjectKind> {
     let dir = env::current_dir()?;
-    match (dir.join("Cargo.toml").exists(), dir.join("go.mod").exists()) {
-        (true, _) => Ok(ProjectKind::Rust),
-        (false, true) => Ok(ProjectKind::Go),
-        (false, true) => Ok(ProjectKind::Python),
-        (false, false) => Err(anyhow!("No supported project kind found")),
-    }
+    [
+        ("Cargo.toml", ProjectKind::Rust),
+        ("go.mod", ProjectKind::Go),
+        ("pyproject.toml", ProjectKind::Python),
+    ]
+    .into_iter()
+    .find(|(marker, _)| dir.join(marker).exists())
+    .map(|(_, kind)| kind)
+    .ok_or_else(|| anyhow!("No supported project kind found"))
 }
 
 pub fn rust_package_metadata() -> Result<(String, String)> {
