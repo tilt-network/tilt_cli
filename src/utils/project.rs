@@ -5,6 +5,7 @@ use toml::Value;
 
 pub enum ProjectKind {
     Rust,
+    Python,
     Go,
 }
 
