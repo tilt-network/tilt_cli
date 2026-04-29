@@ -1,0 +1,22 @@
+package tilt:app@0.1.0;
+
+world tilt {
+    include wasi:cli/imports@0.2.0;
+
+    record error {
+        kind: error-kind,
+        message: string,
+    }
+
+    enum error-kind {
+        invalid,
+        too-large,
+        unsupported,
+        insufficient-memory,
+        insufficient-space,
+        not-permitted,
+        unknown,
+    }
+
+    export execute: func(req: list<u8>) -> result<list<u8>, error>;
+}
