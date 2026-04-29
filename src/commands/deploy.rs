@@ -1,5 +1,8 @@
 use crate::commands::build::Build;
-use crate::utils::{self, ProjectKind, detect_project_kind, go_package_metadata, rust_package_metadata};
+use crate::utils::{
+    self, ProjectKind, detect_project_kind, go_package_metadata, python_package_metadata,
+    rust_package_metadata,
+};
 use anyhow::Result;
 use clap::Args;
 use reqwest::{Client, multipart};
@@ -29,6 +32,7 @@ impl Deploy {
                 let (name, _) = go_package_metadata()?;
                 (name, String::new())
             }
+            ProjectKind::Python => python_package_metadata()?,
         };
 
         let organization_id = utils::load_selected_organization_id()?;
@@ -74,5 +78,6 @@ fn release_path() -> Result<String> {
                 Ok("tilt.wasm".to_string())
             }
         }
+        ProjectKind::Python => Ok("tilt.wasm".to_string()),
     }
 }
