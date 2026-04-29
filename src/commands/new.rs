@@ -150,7 +150,7 @@ impl New {
         fs::create_dir_all(format!("{name}/wit")).context("Failed to create wit directory")?;
 
         fs::write(format!("{name}/app.py"), PY_APP).context("Failed to write app.py")?;
-        fs::write(format!("{name}/component.wit"), PY_WIT)
+        fs::write(format!("{name}/wit/component.wit"), PY_WIT)
             .context("Failed to write component.wit")?;
         fs::write(format!("{name}/pyproject.toml"), pyproject)
             .context("Failed to write pyproject.toml")?;
