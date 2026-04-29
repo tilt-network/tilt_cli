@@ -18,7 +18,7 @@ pub const GO_WKG_LOCK: &str = include_str!("../../static/go/wkg.lock.template");
 pub struct New {
     #[arg(short = 'n', long)]
     name: String,
-    #[arg(long, default_value = "rust", value_parser = ["rust", "go"])]
+    #[arg(long, default_value = "rust", value_parser = ["rust", "go", "python"])]
     template: String,
 }
 
