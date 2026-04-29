@@ -15,7 +15,11 @@ impl Deploy {
     pub async fn run(&self) -> Result<()> {
         Build {}.run().await?;
 
-        let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
+        let file_size = fs::metadata(release_path()?)?.len();
+        let timeout_secs = (file_size / (100 * 1024)).max(30); // ~100 KB/s mínimo, mínimo 30s
+        let client = Client::builder()
+            .timeout(Duration::from_secs(timeout_secs))
+            .build()?;
         let base_url = utils::url_from_env();
         let url = format!("{base_url}/programs");
 
