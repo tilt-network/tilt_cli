@@ -6,6 +6,7 @@ use toml::Value;
 pub enum ProjectKind {
     Rust,
     Go,
+    Python,
 }
 
 pub fn detect_project_kind() -> Result<ProjectKind> {
@@ -14,6 +15,8 @@ pub fn detect_project_kind() -> Result<ProjectKind> {
         Ok(ProjectKind::Rust)
     } else if dir.join("go.mod").exists() {
         Ok(ProjectKind::Go)
+    } else if dir.join("app.py").exists() && dir.join("wit").join("component.wit").exists() {
+        Ok(ProjectKind::Python)
     } else {
         Err(anyhow!("No supported project kind found"))
     }
@@ -65,4 +68,15 @@ pub fn go_package_metadata() -> Result<(String, String)> {
         .to_string();
 
     Ok((name, module_path))
+}
+
+pub fn python_package_metadata() -> Result<(String, String)> {
+    let dir = env::current_dir()?;
+    let name = dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| anyhow!("Failed to infer Python project name"))?
+        .to_string();
+
+    Ok((name, String::new()))
 }

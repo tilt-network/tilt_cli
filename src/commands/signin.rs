@@ -5,7 +5,6 @@ use clap::Args;
 use reqwest::Client;
 use serde::Deserialize;
 use std::fs;
-use std::time::Duration;
 
 #[derive(Debug, Args)]
 pub struct Signin {
@@ -16,7 +15,9 @@ pub struct Signin {
 
 impl Signin {
     pub async fn run(&self) -> Result<()> {
-        let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
+        let client = Client::builder()
+            .timeout(utils::http_timeout_from_env())
+            .build()?;
         let base_url = utils::url_from_env();
         let response = client
             .post(format!("{base_url}/sign_in/api_key"))

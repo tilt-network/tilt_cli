@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use clap::Args;
-use std::process::Command;
+use std::{path::Path, process::Command};
 
 use crate::utils::{ProjectKind, detect_project_kind};
 
@@ -12,6 +12,7 @@ impl Test {
         match detect_project_kind()? {
             ProjectKind::Rust => self.test_rust(),
             ProjectKind::Go => self.test_go(),
+            ProjectKind::Python => self.test_python(),
         }
     }
 
@@ -39,6 +40,34 @@ impl Test {
 
         if !status.success() {
             anyhow::bail!("Go test failed");
+        }
+        Ok(())
+    }
+
+    fn test_python(&self) -> Result<()> {
+        let python = if Path::new(".venv/bin/python").exists() {
+            ".venv/bin/python"
+        } else {
+            "python3"
+        };
+
+        let status = if Path::new("test_app.py").exists() {
+            Command::new(python)
+                .args(["-m", "unittest", "test_app.py"])
+                .status()
+                .context("Failed to execute Python tests from test_app.py")?
+        } else {
+            Command::new(python)
+                .args([
+                    "-c",
+                    "import app; assert app.WitWorld().execute(b'test') == b'processed: test'",
+                ])
+                .status()
+                .context("Failed to execute Python test. Do you have Python installed?")?
+        };
+
+        if !status.success() {
+            anyhow::bail!("Python test failed");
         }
         Ok(())
     }

@@ -4,7 +4,6 @@ use chrono::{DateTime, Utc};
 use clap::Args;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 use uuid::Uuid;
 
 #[derive(Debug, Args)]
@@ -14,7 +13,9 @@ impl List {
     pub async fn run(&self) -> Result<()> {
         let base_url = utils::url_from_env();
         let url = format!("{base_url}/programs");
-        let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
+        let client = Client::builder()
+            .timeout(utils::http_timeout_from_env())
+            .build()?;
         let token = utils::load_auth_token()?;
         let organization_id = utils::load_selected_organization_id()?;
 

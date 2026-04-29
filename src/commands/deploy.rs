@@ -1,9 +1,12 @@
 use crate::commands::build::Build;
-use crate::utils::{self, ProjectKind, detect_project_kind, go_package_metadata, rust_package_metadata};
+use crate::utils::{
+    self, ProjectKind, detect_project_kind, go_package_metadata, python_package_metadata,
+    rust_package_metadata,
+};
 use anyhow::Result;
 use clap::Args;
 use reqwest::{Client, multipart};
-use std::{fs, path::Path, time::Duration};
+use std::{fs, path::Path};
 
 #[derive(Debug, Args)]
 pub struct Deploy {}
@@ -12,7 +15,9 @@ impl Deploy {
     pub async fn run(&self) -> Result<()> {
         Build {}.run().await?;
 
-        let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
+        let client = Client::builder()
+            .timeout(utils::http_timeout_from_env())
+            .build()?;
         let base_url = utils::url_from_env();
         let url = format!("{base_url}/programs");
 
@@ -29,6 +34,7 @@ impl Deploy {
                 let (name, _) = go_package_metadata()?;
                 (name, String::new())
             }
+            ProjectKind::Python => python_package_metadata()?,
         };
 
         let organization_id = utils::load_selected_organization_id()?;
@@ -51,7 +57,12 @@ impl Deploy {
         if status.is_success() {
             println!("Program deployed successfully");
         } else {
-            println!("Failed to deploy program: {status}");
+            let body = response.text().await.unwrap_or_default();
+            if body.trim().is_empty() {
+                println!("Failed to deploy program: {status}");
+            } else {
+                println!("Failed to deploy program: {status}\n{body}");
+            }
         }
 
         Ok(())
@@ -74,5 +85,6 @@ fn release_path() -> Result<String> {
                 Ok("tilt.wasm".to_string())
             }
         }
+        ProjectKind::Python => Ok("tilt:app@0.1.0.wasm".to_string()),
     }
 }

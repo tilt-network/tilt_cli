@@ -129,8 +129,7 @@ impl New {
 // Both are i32 in WASM linear memory, so the patch is ABI-compatible.
 fn patch_wasmexport_compat(name: &str) -> Result<()> {
     let path = format!("{name}/internal/tilt/app/tilt/tilt.wasm.go");
-    let content = fs::read_to_string(&path)
-        .context("Failed to read generated tilt.wasm.go")?;
+    let content = fs::read_to_string(&path).context("Failed to read generated tilt.wasm.go")?;
 
     let patched = content
         .replace(

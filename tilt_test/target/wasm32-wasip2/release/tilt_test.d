@@ -1,0 +1,1 @@
+/home/yamuna/Área\ de\ trabalho/Projetos/Yamuna/Working/tilt_cli/tilt_test/target/wasm32-wasip2/release/tilt_test.wasm: /home/yamuna/Área\ de\ trabalho/Projetos/Yamuna/Working/tilt_cli/tilt_test/src/lib.rs /home/yamuna/Área\ de\ trabalho/Projetos/Yamuna/Working/tilt_cli/tilt_test/src/tilt.rs
