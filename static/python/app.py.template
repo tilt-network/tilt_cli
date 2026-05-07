@@ -1,0 +1,7 @@
+import wit_world
+
+
+class WitWorld(wit_world.WitWorld):
+    def execute(self, req: bytes) -> bytes:
+        # TODO: implement your logic here
+        return req
