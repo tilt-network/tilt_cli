@@ -155,7 +155,27 @@ impl New {
         fs::write(format!("{name}/pyproject.toml"), pyproject)
             .context("Failed to write pyproject.toml")?;
 
-        let bindings = Command::new("componentize-py")
+        let py_cmd = Command::new("python3")
+            .args(["-m", "venv", ".venv"])
+            .current_dir(name)
+            .status()
+            .context("Failed to run python3. Do you have it installed?")?;
+
+        if !py_cmd.success() {
+            anyhow::bail!("python3 command failed");
+        }
+
+        let pip_cmd = Command::new(".venv/bin/pip")
+            .args(["install", "componentize-py"])
+            .current_dir(name)
+            .status()
+            .context("Failed to run pip install.")?;
+
+        if !pip_cmd.success() {
+            anyhow::bail!("pip command failed");
+        }
+
+        let bindings = Command::new(".venv/bin/componentize-py")
             .args(["-d", "wit/", "-w", "tilt", "bindings", "."])
             .current_dir(name)
             .status()
@@ -166,7 +186,7 @@ impl New {
         }
 
         println!("Project {name} created successfully!");
-        println!("      cd./{name}");
+        println!("      cd ./{name}");
         println!("      tilt build");
 
         Ok(())

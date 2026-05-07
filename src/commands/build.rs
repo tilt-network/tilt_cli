@@ -106,7 +106,7 @@ impl Build {
     }
 
     fn build_python(&self) -> Result<()> {
-        let status = Command::new("componentize-py")
+        let status = Command::new(".venv/bin/componentize-py")
             .args([
                 "-d",
                 "wit/",
